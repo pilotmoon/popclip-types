@@ -5,8 +5,5 @@ node_modules/
 package-lock.json
 bun.lockb
 
-# docs
-docs/
-
 # macos
 .DS_Store
