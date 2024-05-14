@@ -1195,29 +1195,12 @@ declare const pasteboard: Pasteboard;
  */
 declare function print(...args: any[]): void;
 
-/*
- * Export an object for use by another file.
- *
- * #### Notes
- *
- * The _define_ function family exports an arbitrary object, which other files can import using  {@link require}.
- *
- * It should be called only once in any file; if it is called more than once, only the
- * final call will have any effect.
- *
- * Partially implements AMD spec: https://github.com/amdjs/amdjs-api/wiki/AMD
- *
- * Recommendation: instead of this, use  {@link defineExtension} or `module.exports = ...`.
+/**
+ * A promise-based sleep function. Included as a more convenient alternative
+ * to  {@link setTimeout} for performing simple delays. Call as `await sleep(1000)`.
+ * @param durationMilliseconds How long to sleep in milliseconds
  */
-declare function define(object: object): void;
-declare function define(factory: () => object): void;
-declare function define(dependencies: string[], factory: () => object): void;
-declare function define(id: string, factory: () => object): void;
-declare function define(
-	id: string,
-	dependencies: string[],
-	factory: () => object,
-): void;
+declare function sleep(durationMilliseconds: number): Promise<void>;
 
 /**
  * This global function may be called as an alternative to setting `module.exports` directly.
@@ -1233,93 +1216,3 @@ declare function define(
 declare function defineExtension<CustomOptions extends Options = Options>(
 	extension: Extension<CustomOptions>,
 ): void;
-
-/* Declare ambient module + exports for CommonJS-style exporting */
-declare const module: { exports: any };
-declare const exports: any;
-
-/**
- * Import an object from another file.
- *
- * #### Notes
- *
- * PopClip's `require()` implementation attempts to import from the following module formats:
- *
- * - AMD modules, which use `define(...)`.
- * - CommonJS modules, which use `module.exports = ...` or `exports.name = ...`
- * - TypeScript-compiled ES modules, which use `exports.default = ...`
- *
- * #### Notes
- *
- * Paths beginning with `./` or `../` are resolved relative to the the location of the current file.
- *
- * Otherwise, the path is resolved relative to the extensions's package root.
- * If there is no file in the extension, PopClip will look in its internal module repository.
- *
- * If no file extension is given, PopCLip will try adding the extensions `.js`, `.ts`, `.json` in that order.
- *
- * TypeScript files are transpiled to JavaScript on the fly.
- *
- * JSON files are parsed and returned as an object.å
- *
- * @param file Path to the file to import.
- * @return The imported object.
- */
-declare function require(file: string): object;
-
-/**
- * A promise-based sleep function. Included as a more convenient alternative
- * to  {@link setTimeout} for performing simple delays. Call as `await sleep(1000)`.
- * @param durationMilliseconds How long to sleep in milliseconds
- */
-declare function sleep(durationMilliseconds: number): Promise<void>;
-
-/* WebAPI and Node.js Globals
- * The following functions and objects are available in PopClip via polyfills.
- */
-
-/**
- * Call a function after a specified time interval.
- *
- * #### Notes
- *
- * This is PopClip's own implementation of the standard
- * [setTimeout](http://developer.mozilla.org/en-US/docs/Web/API/SetTimeout) function,
- * as found in browsers.
- * Ordinarily you shouldn't need to use this. It is is mainly included for
- * compatibility with libraries that might need it.
- *
- * @param callback A function to be called after the timer expires.
- * @param timeout Timeout in milliseconds. If this parameter is omitted, a value of 0 is used,
- * @param args Additional arguments to be passed to the callback function.
- * @returns Numeric identifier for the timer which can be passed to  {@link clearTimeout} to cancel it.
- */
-declare function setTimeout(
-	callback: (...args: any) => void,
-	timeout?: number,
-	...args: any
-): number;
-
-/**
- * Cancels a timeout prevouly created with  {@link setTimeout}.
- * @param timeoutId Identifier of the timeout to cancel.
- */
-declare function clearTimeout(timeoutId: number): void;
-
-// these are from WebAPI, and are implemented in PopClip with polyfills from `core-js` library
-declare function btoa(string: string): string;
-declare function atob(string: string): string;
-declare function structuredClone<T>(value: T): T;
-declare const URL: any;
-declare const URLSearchParams: any;
-
-// XMLHttpRequest is implemented natively in PopClip
-declare const XMLHttpRequest: any;
-
-// Blob is is a WebAPI object, implemented in PopClip with 'node-blob` library
-declare const Blob: any;
-
-// Buffer is a node.js object, implemented in PopClip with 'buffer' library
-declare const Buffer: any;
-
-// TODO: Not sure how to improve typings for these imported globals?
