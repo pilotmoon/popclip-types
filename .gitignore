@@ -3,5 +3,10 @@ node_modules/
 
 # lock files
 package-lock.json
-yarn.lock
 bun.lockb
+
+# docs
+docs/
+
+# macos
+.DS_Store

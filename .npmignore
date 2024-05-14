@@ -1,4 +1,6 @@
 resources/
+docs/
 bun.lockb
 package.lock
 tsconfig.json
+.DS_Store
