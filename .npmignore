@@ -1,0 +1,4 @@
+resources/
+bun.lockb
+package.lock
+tsconfig.json

@@ -1,0 +1,14 @@
+{
+  "name": "@popclip/types",
+  "license": "MIT",
+  "version": "1.4586.0",
+  "types": "./popclip.d.ts",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "docs": "typedoc"
+  },
+  "devDependencies": {
+    "typedoc": "0.25.13",
+    "typescript": "5.4.5"
+  }
+}

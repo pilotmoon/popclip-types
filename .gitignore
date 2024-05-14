@@ -1,0 +1,7 @@
+# dependency directories
+node_modules/
+
+# lock files
+package-lock.json
+yarn.lock
+bun.lockb

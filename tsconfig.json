@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2023"]
+  },
+  "typedocOptions": {
+    "entryPoints": ["./popclip.d.ts"],
+    "name": "PopClip JavaScript API Reference",
+    "out": "./docs",
+    "disableSources": false,
+    "sort": ["alphabetical"],
+    "excludeExternals": true,
+    "readme": "./resources/docs.md",
+    "excludeNotDocumented": true
+  }
+}
