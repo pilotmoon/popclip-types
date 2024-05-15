@@ -1,6 +1,6 @@
 {
   "name": "@popclip/types",
-  "version": "1.4586.1",
+  "version": "1.4586.2",
   "devDependencies": {
     "typedoc": "0.25.13",
     "typescript": "5.4.5"
