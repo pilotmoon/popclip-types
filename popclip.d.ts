@@ -5,7 +5,7 @@ This is a TypeScript definitions file for PopClip's JavaScript interface.
 /**
  * An object giving strings for the different languages PopClip supports. See  {@link LocalizableString}.
  */
-declare interface StringTable {
+interface StringTable {
 	/** English (US) language string. */
 	en: string;
 	/** English (UK) language string. */
@@ -62,14 +62,14 @@ declare interface StringTable {
  * option.label = { en: "Color", "en-GB": "Colour", fr: "Couleur", "zh-Hans": "颜色" }
  * ```
  */
-declare type LocalizableString = string | StringTable;
+type LocalizableString = string | StringTable;
 
 /**
  * Represents the state of the four modifier keys. The value is true when the key is held down
  * at the time the action is invoked.
  * See {@link PopClip.modifiers}.
  */
-declare interface Modifiers {
+interface Modifiers {
 	/** Shift (⇧) key state. */
 	shift: boolean;
 	/** Control (⌃) key state. */
@@ -88,7 +88,7 @@ declare interface Modifiers {
  * ["paste", "!urls", "option-goFishing=1"]
  * ```
  */
-declare type Requirement =
+type Requirement =
 	| "text"
 	| "cut"
 	| "paste"
@@ -101,17 +101,17 @@ declare type Requirement =
 	| `option-${string}=${string}`;
 
 /** Negated form of  {@link Requirement}. */
-declare type NegatedRequirement = `!${Requirement}`;
+type NegatedRequirement = `!${Requirement}`;
 
 /**
  * Strings which can be used to specify the  {@link Action.before} action.
  */
-declare type BeforeStep = "cut" | "copy" | "paste" | "paste-plain";
+type BeforeStep = "cut" | "copy" | "paste" | "paste-plain";
 
 /**
  * Strings which can be used to specify the  {@link Action.after} action.
  */
-declare type AfterStep =
+type AfterStep =
 	| BeforeStep
 	| "popclip-appear"
 	| "show-status"
@@ -123,7 +123,7 @@ declare type AfterStep =
 /**
  * Declares information about an app or website that this extension interacts with.
  */
-declare interface AssociatedApp {
+interface AssociatedApp {
 	/**
 	 * Name of the app. For example "Scrivener"
 	 */
@@ -152,7 +152,7 @@ declare interface AssociatedApp {
  * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
  * @returns A single action, an array of actions.
  */
-declare type PopulationFunction<CustomOptions extends Options = Options> = (
+type PopulationFunction<CustomOptions extends Options = Options> = (
 	input: Input,
 	options: CustomOptions,
 	context: Context,
@@ -161,7 +161,7 @@ declare type PopulationFunction<CustomOptions extends Options = Options> = (
 /**
  * Object returned by  {@link Extension.auth} when there is an authentication flow to kick off
  */
-declare type AuthFlowFunction = (
+type AuthFlowFunction = (
 	url: string,
 	params?: { [key: string]: string | undefined },
 	expect?: string[],
@@ -170,7 +170,7 @@ declare type AuthFlowFunction = (
 /**
  * Credentials used in auth function
  * */
-declare interface AuthInfo {
+interface AuthInfo {
 	/** Value of `username` option (will be empty string if none defined) */
 	username: string;
 	/** Value of `password` option (will be empty string if none defined) */
@@ -189,15 +189,12 @@ declare interface AuthInfo {
 /**
  * Function signature of the  {@link Extension.auth} method.
  */
-declare type AuthFunction = (
-	info: AuthInfo,
-	flow: AuthFlowFunction,
-) => Promise<string>;
+type AuthFunction = (info: AuthInfo, flow: AuthFlowFunction) => Promise<string>;
 
 /**
  * Properties that define how an icon is interpreted.
  */
-declare interface IconProperties {
+interface IconProperties {
 	/**
 	 * If true, the supplied icon will be displayed with its original color instead of being filled in white/black. Default is false.
 	 */
@@ -269,7 +266,7 @@ declare interface IconProperties {
 /**
  * Properties common to Action and Extension
  */
-declare interface ActionProperties extends IconProperties {
+interface ActionProperties extends IconProperties {
 	/**
 	 * A unique identifying string. An identifier for an action can be any string of your choosing.
 	 */
@@ -416,7 +413,7 @@ declare interface ActionProperties extends IconProperties {
  * @param options Current values of the options for this extension. (Same object as  {@link PopClip.options}.)
  * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
  */
-declare type ActionFunction<CustomOptions extends Options = Options> = (
+type ActionFunction<CustomOptions extends Options = Options> = (
 	input: Input,
 	options: CustomOptions & AuthOptions,
 	context: Context,
@@ -426,18 +423,18 @@ declare type ActionFunction<CustomOptions extends Options = Options> = (
  * **Action** represents the properties of a single action.
  * If `code` is omitted, the action displays a disabled title/icon only.
  */
-declare interface Action<CustomOptions extends Options = Options>
+interface Action<CustomOptions extends Options = Options>
 	extends ActionProperties {
 	code?: ActionFunction<CustomOptions>;
 }
 
 // included for JSON Schema
-declare type Entitlement = "network" | "dynamic";
+type Entitlement = "network" | "dynamic";
 
 /**
  * The Extension object defines the PopClip extension.
  */
-declare interface Extension<CustomOptions extends Options = Options>
+interface Extension<CustomOptions extends Options = Options>
 	extends ActionProperties {
 	/**
 	 * The display name of this extension.
@@ -483,10 +480,18 @@ declare interface Extension<CustomOptions extends Options = Options>
 	module?: string;
 }
 
+type OptionType =
+	| "string"
+	| "boolean"
+	| "multiple"
+	| "password"
+	| "heading"
+	| "secret";
+
 /**
  * Defines a single extension option.
  */
-declare interface Option {
+interface OptionBase {
 	/**
 	 * An identifying string for this option.
 	 */
@@ -501,7 +506,7 @@ declare interface Option {
 	 *  * `password`: concealed text entry field (not persisted, only passed to auth function),
 	 *  * `heading`: adds a heading in the user interface, but does not actually define an option
 	 */
-	type: "string" | "boolean" | "multiple" | "password" | "heading" | "secret";
+	type: OptionType;
 
 	/**
 	 * A short label for this option.
@@ -513,10 +518,29 @@ declare interface Option {
 	 */
 	description?: LocalizableString;
 
+	/*
+	 * If true, this option will be hidden in the prefs window. Default is false.
+	 */
+	hidden?: boolean;
+
+	/*
+	 * If true, this option will be be inset to the right of its label, instead of below it. Default is false.
+	 */
+	inset?: boolean;
+}
+
+interface StringOption extends OptionBase {
+	type: "string";
 	/**
-	 * The default value of the option. If ommitted, `string` options default to the empty string,
-	 * `boolean` options default to true, and `multiple` options default to the top item in the list.
-	 * A `password` field may not have a default value.
+	 * The default value of the option. If omitted, `string` options default to the empty string.
+	 */
+	defaultValue?: string;
+}
+
+interface MultipleOption extends OptionBase {
+	type: "multiple";
+	/**
+	 * The default value of the option. If omitted, `multiple` options default to the top item in the list.
 	 */
 	defaultValue?: string | boolean;
 
@@ -530,27 +554,39 @@ declare interface Option {
 	 * If ommitted, the raw value strings are shown instead.
 	 */
 	valueLabels?: LocalizableString[];
+}
 
+interface BooleanOption extends OptionBase {
+	type: "boolean";
+	/**
+	 * The default value of the option. If omitted, `boolean` options default to true.
+	 */
+	defaultValue?: boolean;
 	/**
 	 * An icon for this option. It is only displayed for boolean options, next to the check box.
 	 */
 	icon?: string;
-
-	/*
-	 * If true, this option will be hidden in the prefs window. Default is false.
-	 */
-	hidden?: boolean;
-
-	/*
-	 * If true, this option will be be inset to the right of its label, instead of below it. Default is false.
-	 */
-	inset?: boolean;
 }
+
+interface PasswordOption extends OptionBase {
+	type: "password" | "secret";
+}
+
+interface HeadingOption extends OptionBase {
+	type: "heading";
+}
+
+type Option =
+	| StringOption
+	| MultipleOption
+	| BooleanOption
+	| PasswordOption
+	| HeadingOption;
 
 /**
  * Represents a generic range, as a location and length
  */
-declare interface Range {
+interface Range {
 	location: number;
 	length: number;
 }
@@ -558,14 +594,14 @@ declare interface Range {
 /**
  * An array of strings with an addiontal `ranges` property defining the source of the data in the orignal string.
  */
-declare interface RangedStrings extends Array<string> {
+interface RangedStrings extends Array<string> {
 	ranges: Range[];
 }
 
 /**
  * Input defines properties to access the input text contents.
  */
-declare interface Input {
+interface Input {
 	/**
 	 * The plain text selected by the user. If there is no selected text, this will be the empty string.
 	 */
@@ -654,7 +690,7 @@ declare interface Input {
 /**
  *  Properties relating the context surrounding the selected text.
  */
-declare interface Context {
+interface Context {
 	/**
 	 * Indicates whether the text area supports formatting.
 	 */
@@ -699,7 +735,7 @@ declare interface Context {
 /**
  * Represents the current values of the extension's settings.
  */
-declare interface Options {
+interface Options {
 	readonly [identifier: string]: string | boolean;
 }
 
@@ -707,7 +743,7 @@ declare interface Options {
  * The `authsecret` property has the special behaviour of throwing an `Error` with the message 'Not signed in' if it is accessed while either
  * undefined or holding an empty string.
  */
-declare interface AuthOptions {
+interface AuthOptions {
 	/**
 	 * The stored value that was returned from the `auth()` function.
 	 */
@@ -718,7 +754,7 @@ declare interface AuthOptions {
  * This interface describes the methods and properties of the global {@link popclip} object.
  *
  */
-declare interface PopClip {
+interface PopClip {
 	/**
 	 * The state of the modifier keys when the action was invoked in PopClip.
 	 *
@@ -931,53 +967,9 @@ declare interface PopClip {
 }
 
 /**
- * The global `popclip` object encapsulates the user's current interaction with PopClip, and provides methods
- * for performing various actions. It implements  {@link PopClip}.
- */
-declare const popclip: PopClip;
-
-/**
- * Represents a formatted text string. The underlying implementation uses a macOS Attributed String (`NSAttributedString`) object.
- * Can be constructed from a plain string in RTF, HTML, or Markdown format.
- *
- * #### Example
- * ```js
- * // create a RichString object from a html string
- * const item = new RichString("<b>bold</b> and <i>italic</i>.", {format: 'html'});
- * // create a RichString object from a markdown string
- * const item = new RichString("# Title\n\nBody.", {format: 'markdown'});
- * ```
- */
-declare class RichString {
-	/**
-	 * Create a new RichString object from a string.
-	 *
-	 * @param source The string to convert to a RichString object.
-	 * @param options Options for the conversion.
-	 */
-	constructor(
-		source: string,
-		options?: {
-			/**
-       Format of the source string. Default is 'rtf'.
-       */
-			format?: "rtf" | "html" | "markdown";
-		},
-	);
-	/**
-	 * An RTF representation of the content.
-	 */
-	readonly rtf: string;
-	/**
-	 * An HTML representation of the content.
-	 */
-	readonly html: string;
-}
-
-/**
  * A container for various utility functions and constants  {@link util} object.
  */
-declare interface Util {
+interface Util {
 	/**
 	 * Localize an English string into the current user interface language, if possible.
 	 * This will work for strings which match an existing string in PopClip's user interface.
@@ -1115,14 +1107,9 @@ declare interface Util {
 }
 
 /**
- * The global `util` object acts as a container for various utility functions and constants. It implements  {@link Util}.
- */
-declare const util: Util;
-
-/**
  * Represents the raw pasteboard content, indexed by UTI. Supports string data only.
  */
-declare interface PasteboardContent {
+interface PasteboardContent {
 	"public.utf8-plain-text"?: string;
 	"public.html"?: string;
 	"public.rtf"?: string;
@@ -1132,7 +1119,7 @@ declare interface PasteboardContent {
 /**
  * Options for Paste operations.
  */
-declare interface PasteOptions {
+interface PasteOptions {
 	/**
 	 * Whether to restore the original contents of the pasteboard after the paste
 	 * operation. Default is `false`.
@@ -1143,7 +1130,7 @@ declare interface PasteOptions {
 /**
  * A simplified interface to the macOS pasteboard. Implemented by the global object,  {@link pasteboard}.
  */
-declare interface Pasteboard {
+interface Pasteboard {
 	/**
 	 * Get and set the plain text content of the pasteboard.
 	 *
@@ -1169,6 +1156,55 @@ declare interface Pasteboard {
 	 */
 	content: PasteboardContent;
 }
+
+/**
+ * The global `popclip` object encapsulates the user's current interaction with PopClip, and provides methods
+ * for performing various actions. It implements  {@link PopClip}.
+ */
+declare const popclip: PopClip;
+
+/**
+ * Represents a formatted text string. The underlying implementation uses a macOS Attributed String (`NSAttributedString`) object.
+ * Can be constructed from a plain string in RTF, HTML, or Markdown format.
+ *
+ * #### Example
+ * ```js
+ * // create a RichString object from a html string
+ * const item = new RichString("<b>bold</b> and <i>italic</i>.", {format: 'html'});
+ * // create a RichString object from a markdown string
+ * const item = new RichString("# Title\n\nBody.", {format: 'markdown'});
+ * ```
+ */
+declare class RichString {
+	/**
+	 * Create a new RichString object from a string.
+	 *
+	 * @param source The string to convert to a RichString object.
+	 * @param options Options for the conversion.
+	 */
+	constructor(
+		source: string,
+		options?: {
+			/**
+       Format of the source string. Default is 'rtf'.
+       */
+			format?: "rtf" | "html" | "markdown";
+		},
+	);
+	/**
+	 * An RTF representation of the content.
+	 */
+	readonly rtf: string;
+	/**
+	 * An HTML representation of the content.
+	 */
+	readonly html: string;
+}
+
+/**
+ * The global `util` object acts as a container for various utility functions and constants. It implements  {@link Util}.
+ */
+declare const util: Util;
 
 /**
  * The global `pasteboard` object provides access to the contents of the macOS general pasteboard (i.e. the system clipboard). It implements  {@link Pasteboard}.
