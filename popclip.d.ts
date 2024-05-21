@@ -831,17 +831,22 @@ interface PopClip {
 	) => void;
 
 	/**
-	 * Display text inside PopClip's popup, with option to make the display a clickable button to
-	 * paste the text.
-	 * @param text The text to display. It will be truncated to 160 characters when shown.
-	 * @param options
+	 * Display text to the user.
+	 * @param text The text to display.
+	 * @param options Options.
 	 */
 	showText: (
 		text: string,
 		options?: {
 			/**
-			 * If `true`, and the app's Paste command is available, the displayed text will be in a cickable button,
-			 * which clicked, pastes the full text.
+			 * Display style:
+			 * - `compact` (default): Show the text inside PopClip's popup. It will be truncated to 160 characters when shown.
+			 * - `large`: Show as "Large Type" in full screen.
+			 */
+			style?: "compact" | "large";
+			/**
+			 * Applies to `compact` display mode only. If `true`, and the app's Paste command is available,
+			 * the displayed text will be in a clickable button, which clicked, pastes the full text.
 			 */
 			preview?: boolean;
 		},
