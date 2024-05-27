@@ -152,7 +152,7 @@ interface AssociatedApp {
  * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
  * @returns A single action, an array of actions.
  */
-type PopulationFunction<CustomOptions extends Options = Options> = (
+type PopulationFunction<CustomOptions = Options> = (
 	input: Input,
 	options: CustomOptions,
 	context: Context,
@@ -413,7 +413,7 @@ interface ActionProperties extends IconProperties {
  * @param options Current values of the options for this extension. (Same object as  {@link PopClip.options}.)
  * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
  */
-type ActionFunction<CustomOptions extends Options = Options> = (
+type ActionFunction<CustomOptions = Options> = (
 	input: Input,
 	options: CustomOptions & AuthOptions,
 	context: Context,
@@ -423,8 +423,7 @@ type ActionFunction<CustomOptions extends Options = Options> = (
  * **Action** represents the properties of a single action.
  * If `code` is omitted, the action displays a disabled title/icon only.
  */
-interface Action<CustomOptions extends Options = Options>
-	extends ActionProperties {
+interface Action<CustomOptions = Options> extends ActionProperties {
 	code?: ActionFunction<CustomOptions>;
 }
 
@@ -1254,6 +1253,6 @@ declare function sleep(durationMilliseconds: number): Promise<void>;
  *
  * @param extension The extension object to export.
  */
-declare function defineExtension<CustomOptions extends Options = Options>(
+declare function defineExtension<CustomOptions = Options>(
 	extension: Extension<CustomOptions>,
 ): void;
