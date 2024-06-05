@@ -433,8 +433,7 @@ type Entitlement = "network" | "dynamic";
 /**
  * The Extension object defines the PopClip extension.
  */
-interface Extension<CustomOptions extends Options = Options>
-	extends ActionProperties {
+interface Extension<CustomOptions = Options> extends ActionProperties {
 	/**
 	 * The display name of this extension.
 	 */
@@ -479,6 +478,9 @@ interface Extension<CustomOptions extends Options = Options>
 	module?: string;
 }
 
+/**
+ * The possible values for `type` of {@link Option}.
+ */
 type OptionType =
 	| "string"
 	| "boolean"
@@ -528,6 +530,9 @@ interface OptionBase {
 	inset?: boolean;
 }
 
+/**
+ A string-valued option.
+*/
 interface StringOption extends OptionBase {
 	type: "string";
 	/**
@@ -536,6 +541,9 @@ interface StringOption extends OptionBase {
 	defaultValue?: string;
 }
 
+/**
+ * A multiple-choice option.
+ */
 interface MultipleOption extends OptionBase {
 	type: "multiple";
 	/**
@@ -549,12 +557,15 @@ interface MultipleOption extends OptionBase {
 	values?: string[];
 
 	/**
-	 * Display names corresponding to the entries in the  {@link values} array. These are shown in the option UI.
+	 * Display names corresponding to the entries in the {@link values} array. These are shown in the option UI.
 	 * If ommitted, the raw value strings are shown instead.
 	 */
 	valueLabels?: LocalizableString[];
 }
 
+/**
+ * A boolean option.
+ */
 interface BooleanOption extends OptionBase {
 	type: "boolean";
 	/**
@@ -567,14 +578,23 @@ interface BooleanOption extends OptionBase {
 	icon?: string;
 }
 
+/**
+ * A concealed string option.
+ */
 interface PasswordOption extends OptionBase {
 	type: "password" | "secret";
 }
 
+/**
+ * A heading option, which does not define an actual option, but adds a heading in the preferences window.
+ */
 interface HeadingOption extends OptionBase {
 	type: "heading";
 }
 
+/**
+ Represents a single option in the extension's preferences.
+*/
 type Option =
 	| StringOption
 	| MultipleOption
