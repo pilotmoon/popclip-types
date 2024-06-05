@@ -1,6 +1,6 @@
 {
   "name": "@popclip/types",
-  "version": "1.4604.1",
+  "version": "1.4615.0",
   "devDependencies": {
     "typedoc": "0.25.13",
     "typescript": "5.4.5"
@@ -10,5 +10,9 @@
     "check": "tsc --noEmit",
     "docs": "typedoc"
   },
-  "types": "./popclip.d.ts"
+  "types": "./popclip.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pilotmoon/popclip-types"
+  }
 }
