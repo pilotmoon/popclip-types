@@ -1003,6 +1003,9 @@ interface Util {
 	 */
 	localize: (string: string) => string;
 
+	/**
+	   Get information about the current locale as configures in macOS settings.
+	*/
 	localeInfo: {
 		localeIdentifier: string;
 		regionCode: string;
@@ -1013,6 +1016,9 @@ interface Util {
 		currencySymbol: string;
 	};
 
+	/**
+	   Get information about the current time zone as configured in macOS settings.
+	*/
 	timeZoneInfo: {
 		identifier: string;
 		abbreviation: string;
@@ -1053,13 +1059,13 @@ interface Util {
 	 */
 	base64Decode: (string: string) => string;
 
-	/** Build a URL from a base URL and additional query parameters */
+	/* Build a URL from a base URL and additional query parameters */
 	buildQueryUrl: (baseUrl: string, params: { [key: string]: string }) => string;
 
-	/** Build a query from params object */
+	/* Build a query from params object */
 	buildQuery: (params: { [key: string]: string }) => string;
 
-	/** Parse a query into params object */
+	/* Parse a query into params object */
 	parseQuery: (query: string) => any;
 
 	/** Decipher a JSON object that has been lightly obscured to prevent constants such as
@@ -1070,6 +1076,33 @@ interface Util {
 
 	// same as global sleep()
 	sleep: (durationMilliseconds: number) => Promise<void>;
+
+	/**
+	 * Fill the provided `TypedArray` with cryptographically secure random values.
+	 * This aims work like `crypto.getRandomValues()` from Web Crypto API.
+	 * Internally, it is implemented using Apple's `SecRandomCopyBytes`.
+	 *
+	 * #### Example
+	 *
+	 * ```js
+	 * const array = new Uint8Array(16); // array of 16 bytes
+	 * util.getRandomValues(array);      // array is now filled with random bytes
+	 * ```
+	 *
+	 * @param typedArray The array to fill with random values. This will be modified in place.
+	 */
+	getRandomValues(
+		typedArray:
+			| Int8Array
+			| Uint8Array
+			| Uint8ClampedArray
+			| Int16Array
+			| Uint16Array
+			| Int32Array
+			| Uint32Array
+			| BigInt64Array
+			| BigUint64Array,
+	): void;
 
 	/**
 	 * The `constant` property is a container for pre-defined constants.
