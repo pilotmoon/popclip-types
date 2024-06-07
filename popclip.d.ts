@@ -621,7 +621,7 @@ type InferOptions<T extends readonly Option[]> = {
   readonly [K in T[number]["identifier"]]: ExtractType<
     Extract<T[number], { identifier: K }>
   >;
-} & AuthOptions;
+};
 
 /**
  * Represents a generic range, as a location and length
