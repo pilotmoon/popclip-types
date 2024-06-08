@@ -1130,6 +1130,12 @@ interface Util {
   ): void;
 
   /**
+   * Generate a RFC 4122 version 4 UUID using a cryptographically secure random number generator.
+   * @returns UUID string such as "e621e1f8-c36c-495a-93fc-0c247a3e6e5f".
+   */
+  randomUuid(): string;
+
+  /**
    * The `constant` property is a container for pre-defined constants.
    */
   readonly constant: {
