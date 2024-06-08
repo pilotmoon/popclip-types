@@ -604,9 +604,8 @@ type Option =
 
 // Create a type mapping from Option Type to TypeScript types
 type OptionTypeMapping = {
-  secret: string;
-  password: string;
   string: string;
+  secret: string;
   multiple: string;
   boolean: boolean;
 };
@@ -616,12 +615,17 @@ type ExtractType<T extends Option> = T["type"] extends keyof OptionTypeMapping
   ? OptionTypeMapping[T["type"]]
   : never;
 
+// Helper type to exclude `never` properties
+type ExcludeNever<T> = {
+  [K in keyof T as T[K] extends never ? never : K]: T[K];
+};
+
 // Create a utility type to infer the OmnivoreOptions type
-type InferOptions<T extends readonly Option[]> = {
+type InferOptions<T extends readonly Option[]> = ExcludeNever<{
   readonly [K in T[number]["identifier"]]: ExtractType<
     Extract<T[number], { identifier: K }>
   >;
-};
+}>;
 
 /**
  * Represents a generic range, as a location and length
