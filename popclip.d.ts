@@ -1136,6 +1136,16 @@ interface Util {
   randomUuid(): string;
 
   /**
+   * Generate hash-based message authentication code (HMAC) using the supplied data, key and algorithm.
+   * Implemented internally by Apple's CommonCrypto.
+   */
+  hmac(
+    data: Uint8Array,
+    key: Uint8Array,
+    algorithm: "sha1" | "md5" | "sha256" | "sha384" | "sha512" | "sha224",
+  ): Uint8Array;
+
+  /**
    * The `constant` property is a container for pre-defined constants.
    */
   readonly constant: {
