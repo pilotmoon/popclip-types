@@ -554,13 +554,13 @@ interface MultipleOption extends OptionBase {
   /**
    * The possible values for a `multiple` option.
    */
-  readonly values?: string[];
+  readonly values?: readonly string[];
 
   /**
    * Display names corresponding to the entries in the {@link values} array. These are shown in the option UI.
    * If ommitted, the raw value strings are shown instead.
    */
-  readonly valueLabels?: LocalizableString[];
+  readonly valueLabels?: readonly LocalizableString[];
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "lib": ["ES2023"]
+    "lib": ["ES2023", "DOM"]
   },
   "typedocOptions": {
     "entryPoints": ["./popclip.d.ts"],
@@ -10,6 +10,7 @@
     "sort": ["alphabetical"],
     "excludeExternals": true,
     "readme": "./resources/docs.md",
-    "excludeNotDocumented": true
+    "excludeNotDocumented": true,
+    "types": ["node"]
   }
 }
