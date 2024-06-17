@@ -1026,7 +1026,7 @@ interface Util {
    * @param string The string to localize.
    * @return The localized string, or the original string if no localized version was avaiable.
    */
-  localize: (string: string) => string;
+  localize(string: string): string;
 
   /**
      Get information about the current locale as configures in macOS settings.
@@ -1051,7 +1051,7 @@ interface Util {
     daylightSaving: boolean;
   };
 
-  htmlToRtf: (html: string) => string | undefined;
+  htmlToRtf(html: string): string | undefined;
 
   /**
    * Encode a string as UTF-8 then Base-64 encode the result.
@@ -1059,7 +1059,7 @@ interface Util {
    * @param string The string to encode.
    * @param options
    */
-  base64Encode: (
+  base64Encode(
     string: string,
     options?: {
       /**
@@ -1071,7 +1071,7 @@ interface Util {
        */
       trimmed?: boolean;
     },
-  ) => string;
+  ): string;
 
   /**
    * Decode a Base-64 string and interpret the result as a UTF-8 string.
@@ -1082,7 +1082,7 @@ interface Util {
    * @param string
    * @returns The decoded string
    */
-  base64Decode: (string: string) => string;
+  base64Decode(string: string): string;
 
   /* Build a URL from a base URL and additional query parameters */
   buildQueryUrl: (baseUrl: string, params: { [key: string]: string }) => string;
@@ -1097,10 +1097,10 @@ interface Util {
    * API keys appearing in plaintext in the source files.
    *
    * This function will ROT13 decipher the text, apply Base64 decoding, and parse the result as JSON. */
-  clarify: (obscuredString: string) => any;
+  clarify(obscuredString: string): any;
 
   // same as global sleep()
-  sleep: (durationMilliseconds: number) => Promise<void>;
+  sleep(durationMilliseconds: number): Promise<void>;
 
   /**
    * Fill the provided `TypedArray` with cryptographically secure random values.
