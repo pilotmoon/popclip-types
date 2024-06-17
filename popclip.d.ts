@@ -1094,7 +1094,7 @@ interface Util {
   parseQuery: (query: string) => any;
 
   /** Decipher a JSON object that has been lightly obscured to prevent constants such as
-   * API keys appearing in plaintext in the source files.
+   * API client identifiers appearing in plaintext in the source files.
    *
    * This function will ROT13 decipher the text, apply Base64 decoding, and parse the result as JSON. */
   clarify(obscuredString: string): any;
