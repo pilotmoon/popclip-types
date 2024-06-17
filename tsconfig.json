@@ -10,7 +10,6 @@
     "sort": ["alphabetical"],
     "excludeExternals": true,
     "readme": "./resources/docs.md",
-    "excludeNotDocumented": true,
-    "types": ["node"]
+    "excludeNotDocumented": true
   }
 }
