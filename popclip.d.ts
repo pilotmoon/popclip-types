@@ -984,6 +984,14 @@ interface PopClip {
        * Bundle identifier of the app to open the URL with. For example `"com.google.Chrome"`.
        */
       app?: string;
+      /**
+       * Whether to request that macOS activate the target app. (Default: `true`)
+       */
+      activate?: boolean;
+      /**
+       * Whether to open the URL in a background browser tab, where supported. (Default: `false`)
+       */
+      backgroundTab?: boolean;
     },
   ) => void;
 
