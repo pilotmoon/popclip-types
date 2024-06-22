@@ -1049,7 +1049,7 @@ interface Util {
   /**
    * Get infomation about available sharing services for {@link popclip.share}.
    */
-  sharingServicesInfo: Record<string, string[]>;
+  sharingServicesInfo: string;
 
   htmlToRtf(html: string): string | undefined;
 
