@@ -1003,7 +1003,7 @@ interface PopClip {
    *
    * The list of available sharing services is determined by the user's system configuration.
    *
-   * @param serviceName The name of the sharing service to use.
+   * @param serviceName The name of the sharing service to use. Available names can be found by calling {@link util.sharingServicesInfo}.
    * @param items An array of items to share. Each item can be a string, a {@link RichString} object, or a {@link UrlObject}.
    * @throws If the service name is not recognized, or if the service cannot handle the supplied items, an error is thrown.
    */
@@ -1037,14 +1037,19 @@ interface Util {
   };
 
   /**
-     Get information about the current time zone as configured in macOS settings.
-  */
+   * Get information about the current time zone as configured in macOS settings.
+   */
   timeZoneInfo: {
     identifier: string;
     abbreviation: string;
     secondsOffset: number;
     daylightSaving: boolean;
   };
+
+  /**
+   * Get infomation about available sharing services for {@link popclip.share}.
+   */
+  sharingServicesInfo: Record<string, string[]>;
 
   htmlToRtf(html: string): string | undefined;
 
@@ -1377,7 +1382,7 @@ declare function print(...args: any[]): void;
 
 /**
  * A promise-based sleep function. Included as a more convenient alternative
- * to  {@link setTimeout} for performing simple delays. Call as `await sleep(1000)`.
+ * to  setTimeout for performing simple delays. Call as `await sleep(1000)`.
  * @param durationMilliseconds How long to sleep in milliseconds
  */
 declare function sleep(durationMilliseconds: number): Promise<void>;
