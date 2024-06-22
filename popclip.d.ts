@@ -974,11 +974,12 @@ interface PopClip {
    * popclip.openUrl(`mailto:support@pilotmoon.com?subject=${encodeURIComponent("What's up?")}`); // open mailto link in the default mail application
    * ```
    *
-   * @param url A well-formed URL
+   * @param url URL string, or an object with a `href` property. (If the latter is passed,
+   *  the `href` property is used as the URL but with `+` characters replaced with `%20`.)
    * @param options Options.
    */
   openUrl: (
-    url: string,
+    url: string | { href: string },
     options?: {
       /**
        * Bundle identifier of the app to open the URL with. For example `"com.google.Chrome"`.
