@@ -49,14 +49,12 @@ interface StringTable {
 /**
  * A type to represent a localizable string.
  *
- * #### Notes
- *
  * The value may be either a string or an object.
  * If you supply a string, that string is used.
  * If you supply a  {@link StringTable} object, PopClip will
  * display the string for the user's preferred language if possible, with fallback to the `en` string.
  *
- * #### Example
+ * @example
  * ```js
  * option.label = "Color" // just use this string
  * option.label = { en: "Color", "en-GB": "Colour", fr: "Couleur", "zh-Hans": "颜色" }
@@ -83,7 +81,7 @@ interface Modifiers {
 /**
  * A requirement is specified in the {@link Action.requirements} array as a string.
  *
- * #### Example
+ * @example
  * ```js
  * ["paste", "!urls", "option-goFishing=1"]
  * ```
@@ -293,8 +291,6 @@ interface ActionProperties extends IconProperties {
    * * If no array is specified here, the action takes the value of  {@link Extension.requirements}.
    * * If no array is specified there either, the action takes the default value `["text"]`.
    *
-   * #### Notes
-   *
    * When multiple conditions are specified, all of them must be satisfied.
    *
    * An empty array (`[]`) indicates no requirements at all, meaning the action will always appear.
@@ -325,8 +321,6 @@ interface ActionProperties extends IconProperties {
    * * If no regex is specified here, the action takes the value of  {@link Extension.regex}.
    * * If no regex is specified there either, the action will match any input.
    *
-   * #### Notes
-   *
    * You may express the value either as a
    * [JavaScript regular expression literal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions)
    * (or otherwise constructed `RegExp` object), or as a string.
@@ -343,7 +337,7 @@ interface ActionProperties extends IconProperties {
    *
    * This property has no effect on dynamically generated actions.
    *
-   * #### Example
+   * @example
    * ```js
    * regex = /abc/i   // Example regex 'abc' with 'i' (case insensitive) flag
    *                  // Matches abc, ABC, Abc, etc.
@@ -424,7 +418,7 @@ type ActionFunction<CustomOptions = Options> = (
  * If `code` is omitted, the action displays a disabled title/icon only.
  */
 interface Action<CustomOptions = Options> extends ActionProperties {
-  code?: ActionFunction<CustomOptions>;
+  readonly code?: ActionFunction<CustomOptions>;
 }
 
 // included for JSON Schema
@@ -667,7 +661,7 @@ interface Input {
    *
    * If the regex was specified as an ICU regex in the static config, the value is the array of capture components.
    *
-   * #### Example
+   * @example
    * ```js
    * // text: "apple", regex: /.(.)/
    * selection.regexResult[0] // "ap" (full match)
@@ -802,7 +796,6 @@ interface PopClip {
   /**
    * The state of the modifier keys when the action was invoked in PopClip.
    *
-   * #### Notes
    * During the execution of the population function, all the modifiers will read as false.
    */
   readonly modifiers: Modifiers;
@@ -829,7 +822,7 @@ interface PopClip {
    *
    * If the target app's Paste command is not available, it behaves as {@link copyText} instead.
    *
-   * #### Example
+   * @example
    *
    * ```js
    * // place "Hello" on the clipboard and invoke Paste
@@ -840,30 +833,30 @@ interface PopClip {
    * @param text The plain text string to paste
    * @param options
    */
-  pasteText: (text: string, options?: PasteOptions) => void;
+  pasteText(text: string, options?: PasteOptions): void;
 
   /**
-   * Paste arbitrary pasteboard content.
+   * Paste mixed pasteboard content.
    */
-  pasteContent: (content: PasteboardContent, options?: PasteOptions) => void;
+  pasteContent(content: PasteboardContent, options?: PasteOptions): void;
 
   /**
-   * Places the given string on the pasteboard, and shows "Copied" notificaction to the user.
+   * Place the given string on the pasteboard, optionally showing "Copied" notification to the user.
    * @param text The plain text string to copy
    */
-  copyText: (text: string) => void;
+  copyText(text: string, options?: CopyOptions): void;
 
   /**
-   * Copy arbitrary pasteboard content.
+   * Place mixed content on the pasteboard, optionally showing "Copied" notification to the user.
    */
-  copyContent: (content: PasteboardContent) => void;
+  copyContent(content: PasteboardContent, options?: CopyOptions): void;
 
   /**
    * Invokes a command in the target app.
    * @param command Either `cut`, `copy` or `paste`.
    * @param options Options for the command.
    */
-  performCommand: (
+  performCommand(
     command: "cut" | "copy" | "paste",
     options?: {
       /** Transformation to apply to the pasteboard contents. (Default: `none`)
@@ -872,14 +865,14 @@ interface PopClip {
        */
       transform?: "none" | "plain";
     },
-  ) => void;
+  ): void;
 
   /**
    * Display text to the user.
    * @param text The text to display.
    * @param options Options.
    */
-  showText: (
+  showText(
     text: string,
     options?: {
       /**
@@ -894,35 +887,34 @@ interface PopClip {
        */
       preview?: boolean;
     },
-  ) => void;
+  ): void;
 
   /**
    * PopClip will show a checkmark symbol to indicate success.
    */
-  showSuccess: () => void;
+  showSuccess(): void;
 
   /**
    * PopClip will show an "X" symbol to indicate failure.
    */
-  showFailure: () => void;
+  showFailure(): void;
 
   /**
    * PopClip will open the settings UI for this extension.
    *
-   * #### Notes
    * If the extension has no settings, this method does nothing.
    */
-  showSettings: () => void;
+  showSettings(): void;
 
   /**
    * Trigger PopClip to appear again with the current selection.
    */
-  appear: () => void;
+  appear(): void;
 
   /**
    * Simulate a key press by the user.
    *
-   * #### Examples
+   * @examples
    *
    * ```js
    * // press the key combo ⌘B
@@ -937,8 +929,6 @@ interface PopClip {
    * popclip.pressKey(0x79, util.constant.MODIFIER_OPTION); // equivalent
    * ```
    *
-   * #### Notes
-   *
    * Some key code and modifier constants are available in {@link Util.constant | util.constant}.
    *
    * @param key The key to press. When this parameter is a string, PopClip will interpret it as in
@@ -947,39 +937,40 @@ interface PopClip {
    *
    * @param modifiers An optional bit mask specifiying additional modifier keys, if any.
    */
-  pressKey: (key: string | number, modifiers?: number) => void;
+  pressKey(key: string | number, modifiers?: number): void;
 
   /**
-   * Open a URL in an application.
-   *
-   * #### Choice of application
+   * Open a URL in a browser or other application.
    *
    * If a target application bundle identifier is specified via the `app` option, PopClip will ask that app to open the URL.
    *
    * If no target app is specified:
    *
-   * - If the URL has the http or https scheme, and the current app is a browser, the URL is opened in the current app.
-   * - Otherwise, PopClip asks macOS to open the URL in the default handler for that URL type.
-   *
-   * #### URL encoding
+   * - If the URL is a web URL (http or https scheme) and the current app is a browser, the URL is opened in the current app.
+   * - Otherwise, PopClip asks macOS to open the URL in the default handler for its scheme.
    *
    * Any parameters etc. in the URL must be appropriately percent-encoded. JavaScript provides the
    * [encodeURIComponent()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent)
-   * function for this.
+   * function for this. Alternatively you can use the [URL](https://developer.mozilla.org/en-US/docs/Web/API/URL) class,
+   * which is available as a global in PopClip's JavaScript environment.
    *
-   * #### Example
+   * @example
    * ```js
-   * popclip.openUrl("https://xkcd.com"); // open xckd.com in current/default browser
-   * popclip.openUrl("https://xkcd.com", {app: "com.brave.Browser"}); // open xkcd.com in Brave browser
-   * popclip.openUrl(`mailto:support@pilotmoon.com?subject=${encodeURIComponent("What's up?")}`); // open mailto link in the default mail application
+   * // examples using string URLs
+   * popclip.openUrl("https://xkcd.com"); // open in current/default browser
+   * popclip.openUrl("https://xkcd.com", {app: "com.brave.Browser"}); // open in Brave browser
+   *
+   * // example using URL class
+   * const mailUrl=new URL("mailto:support@pilotmoon.com");
+   * mailUrl.searchParams.append("subject", "What's up?");
+   * popclip.openUrl(mailUrl); // the mailto: link will open in the default mail application
    * ```
    *
-   * @param url URL string, or an object with a `href` property. (If the latter is passed,
-   *  the `href` property is used as the URL but with `+` characters replaced with `%20`.)
+   * @param url URL string or a {@link UrlObject} representing the URL to open.
    * @param options Options.
    */
-  openUrl: (
-    url: string | { href: string },
+  openUrl(
+    url: string | UrlObject,
     options?: {
       /**
        * Bundle identifier of the app to open the URL with. For example `"com.google.Chrome"`.
@@ -990,16 +981,16 @@ interface PopClip {
        */
       activate?: boolean;
       /**
-       * Whether to open the URL in a background browser tab, where supported. (Default: `false`)
+       * When opening a web URL in a supported browser, whether to open the URL in a background tab. (Default: `false`)
        */
       backgroundTab?: boolean;
     },
-  ) => void;
+  ): void;
 
   /**
    * Share items with a named macOS sharing service.
    *
-   * #### Example
+   * @example
    * ```js
    * // share a string with the Messages service
    * popclip.share("com.apple.share.Messages.window", ["Hello, world!"]);
@@ -1010,18 +1001,13 @@ interface PopClip {
    * popclip.share("com.apple.Notes.SharingExtension", [item]);
    * ```
    *
-   * #### Notes
-   *
    * The list of available sharing services is determined by the user's system configuration.
    *
    * @param serviceName The name of the sharing service to use.
-   * @param items An array of items to share. Each item can be a string, a {@link RichString} object, or an object with a `url` property.
+   * @param items An array of items to share. Each item can be a string, a {@link RichString} object, or a {@link UrlObject}.
    * @throws If the service name is not recognized, or if the service cannot handle the supplied items, an error is thrown.
    */
-  share: (
-    serviceName: string,
-    items: (string | RichString | { url: string })[],
-  ) => void;
+  share(serviceName: string, items: (string | RichString | UrlObject)[]): void;
 }
 
 /**
@@ -1116,7 +1102,7 @@ interface Util {
    * This aims work like `crypto.getRandomValues()` from Web Crypto API.
    * Internally, it is implemented using Apple's `SecRandomCopyBytes`.
    *
-   * #### Example
+   * @example
    *
    * ```js
    * const array = new Uint8Array(16); // array of 16 bytes
@@ -1217,10 +1203,18 @@ interface Util {
  * Represents the raw pasteboard content, indexed by UTI. Supports string data only.
  */
 interface PasteboardContent {
+  /**
+   * The UTF-8 plain text content of the pasteboard.
+   */
   "public.utf8-plain-text"?: string;
+  /**
+   * The HTML content of the pasteboard.
+   */
   "public.html"?: string;
+  /**
+   * The RTF content of the pasteboard.
+   */
   "public.rtf"?: string;
-  [key: string]: string | undefined;
 }
 
 /**
@@ -1235,13 +1229,22 @@ interface PasteOptions {
 }
 
 /**
+ * Options for Copy operations.
+ */
+interface CopyOptions {
+  /**
+   * Whether to show the "Copied" notification to the user. (Default: `true`)
+   */
+  notify?: boolean;
+}
+
+/**
  * A simplified interface to the macOS pasteboard. Implemented by the global object,  {@link pasteboard}.
  */
 interface Pasteboard {
   /**
    * Get and set the plain text content of the pasteboard.
    *
-   * #### Notes
    * This property corresponds with the pasteboard type `public.utf8-plain-text`.
    *
    * When placing text on the pasteboard this way, PopClip's "Copied" notification will not appear.
@@ -1250,7 +1253,7 @@ interface Pasteboard {
    * The value of this property will always be a string. If there is no plain text value on the
    * pasteboard, reading this property will give an empty string (`""`).
    *
-   * #### Example
+   * @example
    * ```js
    * let x = pasteboard.text;
    * pasteboard.text = "new text";
@@ -1271,10 +1274,44 @@ interface Pasteboard {
 declare const popclip: PopClip;
 
 /**
+ * The `UrlObject` type is used for passing URL parameters into some methods. It can be either an object with a `url` property,
+ * or an object with an `href` property.
+ *
+ * - If the object has a `url` property, the value of that property is used as the URL.
+ * - If the object has an `href` property, the that string is first processed to replace all `+` with `%20` and then used as the URL.
+ * - If the object has both `url` and `href` properties, the `url` property is used.
+ *
+ * The rationale for this is that [URL](https://developer.mozilla.org/en-US/docs/Web/API/URL) objects in JavaScript provide
+ * the `href` property, with spaces encoded as `+`. Most modern APIs expect spaces to be encoded as `%20`, so this behaviour
+ * allows URL objects to be passed in to methods that want a url, without needing to manually re-encode spaces.
+ *
+ * @example
+ * ```js
+ * const exampleUrl=new URL("https://example.com/path");
+ * exampleUrl.searchParams.set("q","query with spaces");
+ * print(exampleUrl.href)); // this will print "https://example.com/path?q=query+with+spaces"
+ * popclip.openUrl(exampleUrl); // this will open "https://example.com/path?q=query%20with%20spaces"
+ * ```
+ */
+declare type UrlObject =
+  | {
+      /**
+       * String to be used as-is.
+       */
+      url: string;
+    }
+  | {
+      /**
+       * String in which PopClip will replace `+` characters with `%20` before use.
+       */
+      href: string;
+    };
+
+/**
  * Represents a formatted text string. The underlying implementation uses a macOS Attributed String (`NSAttributedString`) object.
  * Can be constructed from a plain string in RTF, HTML, or Markdown format.
  *
- * #### Example
+ * @example
  * ```js
  * // create a RichString object from a html string
  * const item = new RichString("<b>bold</b> and <i>italic</i>.", {format: 'html'});
@@ -1326,7 +1363,7 @@ declare const pasteboard: Pasteboard;
  *
  * then Quit and restart PopClip.
  *
- * #### Example
+ * @example
  * ```js
  * print("Hello, world!")
  * // print: Hello, world!

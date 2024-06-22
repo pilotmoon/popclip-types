@@ -1,8 +1,6 @@
 /**
  * Export an object for use by another file.
  *
- * #### Notes
- *
  * The _define_ function family exports an arbitrary object, which other files can import using  {@link require}.
  *
  * It should be called only once in any file; if it is called more than once, only the
@@ -17,7 +15,7 @@ declare function define(factory: () => object): void;
 declare function define(dependencies: string[], factory: () => object): void;
 declare function define(id: string, factory: () => object): void;
 declare function define(
-	id: string,
-	dependencies: string[],
-	factory: () => object,
+  id: string,
+  dependencies: string[],
+  factory: () => object,
 ): void;
