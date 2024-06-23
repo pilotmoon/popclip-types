@@ -1046,11 +1046,6 @@ interface Util {
     daylightSaving: boolean;
   };
 
-  /**
-   * Get infomation about available sharing services for {@link popclip.share}.
-   */
-  sharingServicesInfo: string;
-
   htmlToRtf(html: string): string | undefined;
 
   /**
