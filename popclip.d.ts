@@ -1003,7 +1003,7 @@ interface PopClip {
    *
    * The list of available sharing services is determined by the user's system configuration.
    *
-   * @param serviceName The name of the sharing service to use. Available names can be found by calling {@link util.sharingServicesInfo}.
+   * @param serviceName The name of the sharing service to use.
    * @param items An array of items to share. Each item can be a string, a {@link RichString} object, or a {@link UrlObject}.
    * @throws If the service name is not recognized, or if the service cannot handle the supplied items, an error is thrown.
    */
