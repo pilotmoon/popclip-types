@@ -476,7 +476,7 @@ interface Extension<CustomOptions = Options> extends ActionProperties {
 	/**
 	 * Exported test function for use during development.
 	 */
-	test: TestFunction;
+	test?: TestFunction;
 
 	// the following are static properties, included for the benefit of the JSON Scheme generation
 	popclipVersion?: number;
