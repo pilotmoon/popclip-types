@@ -1138,6 +1138,19 @@ interface Util {
 	): void;
 
 	/**
+	 * Generate a random integer in range [0, max] with uniform distribution using a cryptographically secure random source.
+	 *
+	 * @example
+	 *
+	 * ```js
+	 * const coinFlip = util.randomUniform(1); // coinFlip has value 0 or 1
+	 * const dieRoll = util.randomUniform(5) + 1; // dieRoll has value from 1 to 6
+	 * ```
+	 * @param max Maximum value to generate. Supplied value will be coerced to a 32-bit unsigned integer.
+	 */
+	randomUniform(max: number): number;
+
+	/**
 	 * Generate a RFC 4122 version 4 UUID using a cryptographically secure random number generator.
 	 * @returns UUID string such as "e621e1f8-c36c-495a-93fc-0c247a3e6e5f".
 	 */
