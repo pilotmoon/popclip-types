@@ -1092,9 +1092,6 @@ interface Util {
 	 */
 	base64Decode(string: string): string;
 
-	/* Build a URL from a base URL and additional query parameters */
-	buildQueryUrl: (baseUrl: string, params: { [key: string]: string }) => string;
-
 	/* Build a query from params object */
 	buildQuery: (params: { [key: string]: string }) => string;
 
