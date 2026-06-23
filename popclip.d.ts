@@ -185,9 +185,28 @@ interface AuthInfo {
 }
 
 /**
+ * Object form of the value returned by {@link Extension.auth}, for when the extension has
+ * more than just the secret to hand back. Returning a bare string is equivalent to
+ * returning `{ secret: theString }`.
+ */
+interface AuthResult {
+	/** The secret to store (e.g. an access token). Saved as the extension's `authsecret`. */
+	secret: string;
+	/** Optional account identifier to display, e.g. an email or username ("Signed in as …"). */
+	label?: string;
+	/** Optional token lifetime in seconds, as reported by the auth server (its `expires_in`).
+	 * PopClip records it with the sign-in time; once it elapses the app treats the extension
+	 * as signed out and prompts the user to sign in again. */
+	expiresIn?: number;
+}
+
+/**
  * Function signature of the  {@link Extension.auth} method.
  */
-type AuthFunction = (info: AuthInfo, flow: AuthFlowFunction) => Promise<string>;
+type AuthFunction = (
+	info: AuthInfo,
+	flow: AuthFlowFunction,
+) => Promise<string | AuthResult>;
 
 /**
  * Properties that define how an icon is interpreted.
@@ -427,6 +446,20 @@ type TestFunction = () => Promise<void> | void;
  */
 interface Action<CustomOptions = Options> extends ActionProperties {
 	readonly code?: ActionFunction<CustomOptions>;
+
+	/**
+	 * If set, clicking this action opens a submenu containing these child actions.
+	 *
+	 * - If it's an array, the supplied actions are used in the submenu.
+	 * - If it's a population function, it is called when the submenu opens to generate its
+	 *   actions dynamically. A submenu function requires the `dynamic` entitlement.
+	 *
+	 * The action's own title and icon label the submenu. If the action also defines `code`,
+	 * it stays directly clickable in addition to offering the submenu.
+	 */
+	readonly submenu?:
+		| (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
+		| PopulationFunction<CustomOptions>;
 }
 
 // included for JSON Schema
@@ -437,14 +470,9 @@ type Entitlement = "network" | "dynamic";
  */
 interface Extension<CustomOptions = Options> extends ActionProperties {
 	/**
-	 * The display name of this extension.
-	 */
-	name?: LocalizableString;
-
-	/**
 	 * Defines the user-configurable options for this extension.
 	 */
-	options?: Option[];
+	options?: readonly Option[];
 
 	/**
 	 * If you define this function then PopClip will display a 'sign in' button in the options UI. When the user clicks the button,
@@ -474,14 +502,28 @@ interface Extension<CustomOptions = Options> extends ActionProperties {
 	action?: Action<CustomOptions> | ActionFunction<CustomOptions>;
 
 	/**
+	 * Makes the whole extension a single button that opens a submenu of child actions, as an
+	 * alternative to `actions`/`action`. Same shape as {@link Action.submenu}: a static array
+	 * of actions, or a population function (requires the `dynamic` entitlement).
+	 */
+	submenu?:
+		| (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
+		| PopulationFunction<CustomOptions>;
+
+	/**
 	 * Exported test function for use during development.
 	 */
 	test?: TestFunction;
 
-	// the following are static properties, included for the benefit of the JSON Scheme generation
+	// the following are static-only properties, included for the benefit of the JSON Schema generation
+  name?: LocalizableString;
+  entitlements?: Entitlement[];
 	popclipVersion?: number;
-	macosVersion?: string;
-	entitlements?: Entitlement[];
+  macosVersion?: string;
+  showAs?: "icon" | "text" | "both";
+  color?: string,
+  authAccountLabel?: string,
+  offersMultipleInstances?: boolean,
 	module?: string;
 }
 
@@ -918,6 +960,26 @@ interface PopClip {
 	 * If the extension has no settings, this method does nothing.
 	 */
 	showSettings(): void;
+
+	/**
+	 * Returns an `Error` to **throw** when the stored sign-in credential is no longer valid
+	 * (for example the server rejected or revoked the token). PopClip clears the saved secret
+	 * — so the extension appears signed out — and opens the settings UI to sign in again.
+	 *
+	 * @example
+	 * if (isAuthError(e)) throw popclip.signInRequiredError();
+	 *
+	 * @param message Optional message for logs/diagnostics.
+	 */
+	signInRequiredError(message?: string): Error;
+
+	/**
+	 * Returns an `Error` to **throw** to send the user to the settings UI **without** clearing
+	 * the sign-in (for example a required option is missing or invalid).
+	 *
+	 * @param message Optional message for logs/diagnostics.
+	 */
+	settingsRequiredError(message?: string): Error;
 
 	/**
 	 * Trigger PopClip to appear again with the current selection.
