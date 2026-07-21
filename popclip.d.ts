@@ -1063,6 +1063,73 @@ interface PopClip {
 	): void;
 
 	/**
+	 * Fill a query into a template URL and open it. This is the mechanism used by
+	 * [URL actions](https://www.popclip.app/dev/url-actions), exposed to JavaScript.
+	 *
+	 * The query is trimmed of surrounding whitespace and URL-encoded, then substituted
+	 * into the template in place of the placeholders `***` and `{popclip text}`. Any
+	 * `{popclip option <name>}` placeholders are replaced with the URL-encoded values
+	 * supplied in the `options` sub-dictionary. The resulting URL is then opened as
+	 * by {@link openUrl}.
+	 *
+	 * The "copy on search" preference is honoured: when it is on (or the `copy` option
+	 * is set), the query text is also copied to the clipboard.
+	 *
+	 * @example
+	 * ```js
+	 * popclip.openTemplateUrl("https://www.google.com/search?q=***", popclip.input.text);
+	 * ```
+	 *
+	 * @param urlTemplate The URL template containing placeholders.
+	 * @param query The text to substitute into the template's query placeholders.
+	 * @param options Options.
+	 */
+	openTemplateUrl(
+		urlTemplate: string,
+		query: string,
+		options?: {
+			/**
+			 * Collapse runs of internal whitespace in the query to a single space.
+			 * Mirrors the `clean query` property of URL actions. (Default: `false`)
+			 */
+			clean?: boolean;
+			/**
+			 * Encode spaces in the query as `+` instead of `%20`. Some search engines
+			 * (for example Amazon) expect this format. Mirrors the `spaces as plus`
+			 * property of URL actions. (Default: `false`)
+			 */
+			plus?: boolean;
+			/**
+			 * Wrap the query in double quotes for an exact-phrase search. If unspecified,
+			 * defaults to the state of the Option (⌥) key when the action was invoked.
+			 */
+			verbatim?: boolean;
+			/**
+			 * Whether to copy the query text to the clipboard, overriding the app's
+			 * "copy on search" preference for this call.
+			 */
+			copy?: boolean;
+			/**
+			 * A mapping of option names to values, used to fill any
+			 * `{popclip option <name>}` placeholders in the template.
+			 */
+			options?: { [key: string]: string };
+			/**
+			 * Bundle identifier of the app to open the URL with. For example `"com.google.Chrome"`.
+			 */
+			app?: string;
+			/**
+			 * Whether to request that macOS activate the target app. (Default: `true`)
+			 */
+			activate?: boolean;
+			/**
+			 * When opening a web URL in a supported browser, whether to open the URL in a background tab. (Default: `false`)
+			 */
+			backgroundTab?: boolean;
+		},
+	): boolean;
+
+	/**
 	 * Share items with a named macOS sharing service.
 	 *
 	 * @example
