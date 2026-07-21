@@ -520,7 +520,7 @@ interface Extension<CustomOptions = Options> extends ActionProperties {
   entitlements?: Entitlement[];
 	popclipVersion?: number;
   macosVersion?: string;
-  showAs?: "icon" | "text" | "both";
+  showAs?: "icon" | "text";
   color?: string,
   authAccountLabel?: string,
   offersMultipleInstances?: boolean,
