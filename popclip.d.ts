@@ -1072,8 +1072,7 @@ interface PopClip {
 	 * supplied in the `options` sub-dictionary. The resulting URL is then opened as
 	 * by {@link openUrl}.
 	 *
-	 * The "copy on search" preference is honoured: when it is on (or the `copy` option
-	 * is set), the query text is also copied to the clipboard.
+   * When the `copy` option is set, the query text is also copied to the clipboard.
 	 *
 	 * @example
 	 * ```js
@@ -1106,7 +1105,7 @@ interface PopClip {
 			verbatim?: boolean;
 			/**
 			 * Whether to copy the query text to the clipboard, overriding the app's
-			 * "copy on search" preference for this call.
+			 * defqault behaviour for this call.
 			 */
 			copy?: boolean;
 			/**
