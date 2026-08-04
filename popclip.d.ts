@@ -993,15 +993,15 @@ interface PopClip {
 	 *
 	 * ```js
 	 * // press the key combo ⌘B
-	 * popclip.pressKey('command B');
+	 * await popclip.pressKey('command B');
 	 * // press the key combo ⌥⌘H
-	 * popclip.pressKey('option command H');
+	 * await popclip.pressKey('option command H');
 	 * // press the return key
-	 * popclip.pressKey('return');
-	 * popclip.pressKey(util.constant.KEY_RETURN); // equivalent
-	 * * // press option and the page down key
-	 * popclip.pressKey('option 0x79');
-	 * popclip.pressKey(0x79, util.constant.MODIFIER_OPTION); // equivalent
+	 * await popclip.pressKey('return');
+	 * await popclip.pressKey(util.constant.KEY_RETURN); // equivalent
+	 * // press option and the page down key
+	 * await popclip.pressKey('option 0x79');
+	 * await popclip.pressKey(0x79, util.constant.MODIFIER_OPTION); // equivalent
 	 * ```
 	 *
 	 * Some key code and modifier constants are available in {@link Util.constant | util.constant}.
@@ -1011,8 +1011,64 @@ interface PopClip {
 	 * When this parameter is a number, PopClip will use that exact key code.
 	 *
 	 * @param modifiers An optional bit mask specifiying additional modifier keys, if any.
+	 *
+	 * @param options Options for the key press.
+	 *
+	 * The `target` option says where PopClip posts the key events:
+	 *
+	 * - `app` (the default) posts to the process of the application PopClip is acting on, using
+	 *   `CGEventPostToPid()`. This is the only target aimed at a particular process, so the keys
+	 *   arrive there whatever holds keyboard focus at the time.
+	 * - `session` posts to the session event tap, `kCGSessionEventTap`.
+	 * - `hid` posts to the HID event tap, `kCGHIDEventTap`.
+	 *
+	 * Where the events go from a tap is up to the system. If a key combo does not have the effect
+	 * you expect with one target, it is worth trying the others.
+	 *
+	 * @returns A promise that resolves once the press has been made. Await it when a later step
+	 * depends on the press having landed; a bare call still works, and PopClip waits for any
+	 * un-awaited presses to complete before it runs the action's after-steps.
+	 *
+	 * ```js
+	 * await popclip.pressKey('command c');
+	 * popclip.pressKey('command space', 0, { target: 'hid' });
+	 * ```
+	 *
+	 * To press a sequence of combos, with waits between them if needed, see
+	 * {@link pressKeys | pressKeys()}.
 	 */
-	pressKey(key: string | number, modifiers?: number): void;
+	pressKey(
+		key: string | number,
+		modifiers?: number,
+		options?: { target?: "app" | "session" | "hid" },
+	): Promise<void>;
+
+	/**
+	 * Simulate a sequence of key presses, with optional waits between them.
+	 *
+	 * The sequence runs as one unit: PopClip makes the presses in order on its key-press queue,
+	 * and no other press can interleave mid-sequence.
+	 *
+	 * @param sequence The presses to make, in order. Each entry is a key press in the same form
+	 * as {@link pressKey | pressKey()}'s `key` parameter — a string such as `'command b'` or a
+	 * numeric key code — or a wait, written `'wait <milliseconds>'` (up to 5000). An entry that
+	 * does not parse is logged and skipped.
+	 *
+	 * @param options The same options as {@link pressKey | pressKey()}: `target` says where the
+	 * presses are posted (`app`, `session` or `hid`).
+	 *
+	 * @returns A promise that resolves once the whole sequence has run. As with `pressKey`, a
+	 * bare call works too.
+	 *
+	 * ```js
+	 * // press ⌘space, give Spotlight a moment, then paste
+	 * await popclip.pressKeys(['command space', 'wait 100', 'command v'], { target: 'hid' });
+	 * ```
+	 */
+	pressKeys(
+		sequence: (string | number)[],
+		options?: { target?: "app" | "session" | "hid" },
+	): Promise<void>;
 
 	/**
 	 * Open a URL in a browser or other application.
