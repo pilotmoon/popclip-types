@@ -1025,17 +1025,13 @@ interface PopClip {
 	 * Where the events go from a tap is up to the system. If a key combo does not have the effect
 	 * you expect with one target, it is worth trying the others.
 	 *
-	 * @returns A promise that resolves once the press has been made. Await it when a later step
-	 * depends on the press having landed; a bare call still works, and PopClip waits for any
-	 * un-awaited presses to complete before it runs the action's after-steps.
+	 * @returns A promise that resolves once the press has been made, and rejects if it fails.
+	 * Await it when a later step depends on the press completing.
 	 *
 	 * ```js
 	 * await popclip.pressKey('command c');
 	 * popclip.pressKey('command space', 0, { target: 'hid' });
 	 * ```
-	 *
-	 * The promise rejects if the press could not be made (if the key does not parse, or the press
-	 * itself failed).
 	 *
 	 * To press a sequence of combos, with waits between them if needed, see
 	 * {@link pressKeys | pressKeys()}.
@@ -1055,13 +1051,13 @@ interface PopClip {
 	 * @param sequence The presses to make, in order. Each entry is a key press in the same form
 	 * as {@link pressKey | pressKey()}'s `key` parameter — a string such as `'command b'` or a
 	 * numeric key code — or a wait, written `'wait <milliseconds>'` (up to 5000). If any entry
-	 * does not parse, the call fails and nothing is pressed.
+	 * does not parse, the call throws and nothing is pressed.
 	 *
 	 * @param options The same options as {@link pressKey | pressKey()}: `target` says where the
 	 * presses are posted (`app`, `session` or `hid`).
 	 *
-	 * @returns A promise that resolves once the whole sequence has run, and rejects if it could
-	 * not be run. As with `pressKey`,a bare call works too.
+	 * @returns A promise that resolves once the whole sequence has run, and rejects if the presses
+	 * could not be made.
 	 *
 	 * ```js
 	 * // press ⌘space, give Spotlight a moment, then paste
