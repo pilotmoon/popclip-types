@@ -463,7 +463,44 @@ interface Action<CustomOptions = Options> extends ActionProperties {
 }
 
 // included for JSON Schema
-type Entitlement = "network" | "dynamic";
+type Entitlement = "network" | "dynamic" | "script";
+
+/**
+ * The value an AppleScript returns: a string, number or boolean, an array for a list result
+ * (possibly nested), or undefined when the script returns no value. Results of any other type
+ * (such as records or object specifiers) come through in their string form, or undefined when
+ * they have none.
+ */
+type AppleScriptResult =
+	| string
+	| number
+	| boolean
+	| undefined
+	| AppleScriptResult[];
+
+/**
+ * Options for {@link PopClip.runAppleScript} and {@link PopClip.runAppleScriptFile}.
+ */
+interface AppleScriptOptions {
+	/**
+	 * Name of a handler (subroutine) in the script to call. Without it, the script runs from
+	 * top to bottom.
+	 */
+	handler?: string;
+	/**
+	 * Arguments for the handler, in order — strings and booleans only. Requires `handler`.
+	 * Passing values as handler parameters is preferable to interpolating them into the script
+	 * source, which invites escaping bugs.
+	 */
+	parameters?: (string | boolean)[];
+	/**
+	 * System permissions the script needs, resolved right before it runs. PopClip shows the
+	 * system consent prompt for any the user has not yet decided; if access is denied, the
+	 * call rejects and PopClip directs the user to the relevant System Settings pane. The only
+	 * recognised value is currently `reminders`.
+	 */
+	permissions?: "reminders"[];
+}
 
 /**
  * The Extension object defines the PopClip extension.
@@ -1068,6 +1105,66 @@ interface PopClip {
 		sequence: (string | number)[],
 		options?: { target?: "app" | "session" | "hid" },
 	): Promise<void>;
+
+	/**
+	 * Run an AppleScript, supplied as source text.
+	 *
+	 * Requires the `script` entitlement, and may only be called during the action phase.
+	 *
+	 * To call a specific handler (subroutine) in the script, name it in the options — see {@link AppleScriptOptions}.
+	 *
+	 * Bad input throws immediately, and nothing runs. A script that runs and errors rejects the promise with an
+	 * error carrying the AppleScript error number as its `errorNumber` property.
+	 *
+	 * @param source The AppleScript source text.
+	 * @param options See {@link AppleScriptOptions}.
+	 * @returns A promise for the script's return value — see {@link AppleScriptResult}.
+	 *
+	 * @example
+	 * ```js
+	 * const script = `
+	 * on addReminder(theName)
+	 *   tell application id "com.apple.reminders"
+	 *     make new reminder with properties {name:theName}
+	 *   end tell
+	 * end addReminder`;
+	 * await popclip.runAppleScript(script, {
+	 *   handler: "addReminder",
+	 *   parameters: [popclip.input.text],
+	 *   permissions: ["reminders"],
+	 * });
+	 * ```
+	 */
+	runAppleScript(
+		source: string,
+		options?: AppleScriptOptions,
+	): Promise<AppleScriptResult>;
+
+	/**
+	 * Run an AppleScript from a file in the extension package.
+	 *
+	 * The same as {@link runAppleScript | runAppleScript()} in every way except where the
+	 * script comes from: `path` names a script file inside the package, relative to the
+	 * package root. An `.applescript` file is read as source text; an `.scpt` (compiled
+	 * script) file is opened by the script runner directly. Other file types, and paths
+	 * outside the package, are refused.
+	 *
+	 * @param path Package-relative path of the `.applescript` or `.scpt` file.
+	 * @param options See {@link AppleScriptOptions}.
+	 * @returns A promise for the script's return value — see {@link AppleScriptResult}.
+	 *
+	 * @example
+	 * ```js
+	 * const result = await popclip.runAppleScriptFile("scripts/lookup.applescript", {
+	 *   handler: "lookup",
+	 *   parameters: [popclip.input.text],
+	 * });
+	 * ```
+	 */
+	runAppleScriptFile(
+		path: string,
+		options?: AppleScriptOptions,
+	): Promise<AppleScriptResult>;
 
 	/**
 	 * Open a URL in a browser or other application.
