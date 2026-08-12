@@ -448,6 +448,21 @@ interface Action<CustomOptions = Options> extends ActionProperties {
   readonly code?: ActionFunction<CustomOptions>;
 
   /**
+   * If `true`, this entry is a separator, rather than an action. It causes a section break
+   * between buttons in a submenu. It has no effect outside submenus. Use it on its own; other properties are ignored.
+   *
+   * @example
+   * ```js
+   * actions: [
+   *   { title: ..., icon: ... },
+   *   { separator: true }
+   *   { title: ..., icon: ... },
+   * ]
+   * ```
+   */
+  readonly separator?: boolean;
+
+  /**
    * If set, clicking this action opens a submenu containing these child actions.
    *
    * - If it's an array, the supplied actions are used in the submenu.
@@ -460,6 +475,23 @@ interface Action<CustomOptions = Options> extends ActionProperties {
   readonly submenu?:
     | (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
     | PopulationFunction<CustomOptions>;
+
+  /**
+   * The action asks to be the popup's primary button — the one that is centred above
+   * the pointer when the popup appears. Used by the built in Copy and Paste actions.
+   * If more than one visible button wants primary display, the leftmost button wins.
+   */
+  readonly wantsPrimaryDisplay?: boolean;
+
+  /**
+   * A submenu asks to be already open when the popup appears, instead of waiting to be
+   * clicked. PopClip opens it directly, with a back button to reach the rest of the popup.
+   * This is used by the built-in Spelling action.
+   *
+   * If more than one submenu asks for initial display, the first one found wins (left-to-right
+   * search including subfolders). It has no effect on an action that is not a submenu.
+   */
+  readonly wantsInitialDisplay?: boolean;
 }
 
 // included for JSON Schema
@@ -633,7 +665,8 @@ interface StringOption extends OptionBase {
 interface MultipleOption extends OptionBase {
   readonly type: "multiple";
   /**
-   * The default value of the option. If omitted, `multiple` options default to the top item in the list.
+   * The default value of the option. If omitted, `multiple` options default to None if `allowNone`
+   * is set, or else the first item in the list.
    */
   readonly defaultValue?: string;
 
@@ -647,6 +680,19 @@ interface MultipleOption extends OptionBase {
    * If ommitted, the raw value strings are shown instead.
    */
   readonly valueLabels?: readonly LocalizableString[];
+
+  /**
+   * If true, the UI offers an "Other…" row in addition to the defined {@link values},
+   * allowing the user to type a value of their own.
+   */
+  readonly allowOther?: boolean;
+
+  /**
+   * If true, the option UI offers a "None" row in addition to the defined {@link values}, whose value is the
+   * empty string. An option with `allowNone` and no {@link defaultValue} defaults to None
+   * rather than to the first value.
+   */
+  readonly allowNone?: boolean;
 }
 
 /**
@@ -918,35 +964,59 @@ interface PopClip {
    *
    * ```js
    * // place "Hello" on the clipboard and invoke Paste
-   * popclip.pasteText("Hello");
+   * await popclip.pasteText("Hello");
    * // place "Hello", then restore the original pasteboard contents
-   * popclip.pasteText("Hello", {restore: true});
+   * await popclip.pasteText("Hello", {restore: true});
    * ```
+   * Returns a promise that resolves once the paste command has been delivered to the app,
+   * after the pasteboard write was confirmed and — if `restore` is set — after the
+   * pasteboard was restored. It rejects if the write never appears on the
+   * pasteboard or the restore fails.
+   *
    * @param text The plain text string to paste
    * @param options
    */
-  pasteText(text: string, options?: PasteOptions): void;
+  pasteText(text: string, options?: PasteOptions): Promise<void>;
 
   /**
-   * Paste mixed pasteboard content.
+   * Paste mixed pasteboard content. Same promise semantics as {@link pasteText}.
    */
-  pasteContent(content: PasteboardContent, options?: PasteOptions): void;
+  pasteContent(
+    content: PasteboardContent,
+    options?: PasteOptions,
+  ): Promise<void>;
 
   /**
    * Place the given string on the pasteboard, optionally showing "Copied" notification to the user.
+   *
+   * Returns a promise that resolves once the items are committed to the pasteboard, and
+   * rejects if the pasteboard refuses the write.
+   *
    * @param text The plain text string to copy
    */
-  copyText(text: string, options?: CopyOptions): void;
+  copyText(text: string, options?: CopyOptions): Promise<void>;
 
   /**
    * Place mixed content on the pasteboard, optionally showing "Copied" notification to the user.
+   * Same promise semantics as {@link copyText}.
    */
-  copyContent(content: PasteboardContent, options?: CopyOptions): void;
+  copyContent(content: PasteboardContent, options?: CopyOptions): Promise<void>;
 
   /**
    * Invokes a command in the target app.
+   *
+   * Returns a promise. For `cut` and `copy` it resolves once the app has placed the
+   * resulting content on the pasteboard and any transform has been applied.
+   * For `paste` it resolves once the once the command has been delivered to the app. An unknown
+   * command or transform value throws immediately, doing nothing.
+   *
    * @param command Either `cut`, `copy` or `paste`.
    * @param options Options for the command.
+   *
+   * @example
+   * ````
+   * await popclip.performCommand("copy")
+   * ````
    */
   performCommand(
     command: "cut" | "copy" | "paste",
@@ -957,7 +1027,7 @@ interface PopClip {
        */
       transform?: "none" | "plain";
     },
-  ): void;
+  ): Promise<void>;
 
   /**
    * Display text to the user.
@@ -1167,6 +1237,50 @@ interface PopClip {
   ): Promise<AppleScriptResult>;
 
   /**
+   * Run a shortcut from the user's Shortcuts library, by name.
+   *
+   * May only be called during the action phase.
+   *
+   * Bad input (a missing name, a non-string input) throws immediately, and nothing runs.
+   * A shortcut that could not be run, or that errors, rejects the promise.
+   *
+   * @param name The name of the shortcut, exactly as it appears in the Shortcuts app.
+   * @param options `input`: text passed to the shortcut as its input; omitted means none.
+   * @returns A promise for the shortcut's result — see {@link AppleScriptResult}. The result
+   * is the shortcut's output: what its last action produces, or what it passes to a "Stop
+   * and Output" action. A shortcut that produces no output resolves to undefined.
+   *
+   * @example
+   * ```js
+   * const result = await popclip.runShortcut("My Shortcut", { input: popclip.input.text });
+   * ```
+   */
+  runShortcut(
+    name: string,
+    options?: { input?: string },
+  ): Promise<AppleScriptResult>;
+
+  /**
+   * Show a file or folder in the Finder. A file is selected inside its enclosing folder; a
+   * folder is opened as the window's own root.
+   *
+   * The path must be an absolute path on the user's disk — the kind found in
+   * {@link Input.data | popclip.input.data.paths}.
+   *
+   * Throws if the path is omitted or does not exist.
+   *
+   * @param path An absolute path to an existing file or folder. A leading `~` is expanded to the user's
+   * home folder.
+   *
+   * @example
+   * ```js
+   * popclip.revealFile(popclip.input.data.paths[0]);
+   * popclip.revealFile("~/Downloads");
+   * ```
+   */
+  revealFile(path: string): void;
+
+  /**
    * Open a URL in a browser or other application.
    *
    * If a target application bundle identifier is specified via the `app` option, PopClip will ask that app to open the URL.
@@ -1180,6 +1294,9 @@ interface PopClip {
    * [encodeURIComponent()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent)
    * function for this. Alternatively you can use the [URL](https://developer.mozilla.org/en-US/docs/Web/API/URL) class,
    * which is available as a global in PopClip's JavaScript environment.
+   *
+   * Returns a promise that resolves once the request has been delivered to the browser or
+   * OS.
    *
    * @example
    * ```js
@@ -1212,7 +1329,7 @@ interface PopClip {
        */
       backgroundTab?: boolean;
     },
-  ): void;
+  ): Promise<void>;
 
   /**
    * Fill a query into a template URL and open it. This is the mechanism used by
@@ -1222,7 +1339,7 @@ interface PopClip {
    * into the template in place of the placeholders `***` and `{popclip text}`. Any
    * `{popclip option <name>}` placeholders are replaced with the URL-encoded values
    * supplied in the `options` sub-dictionary. The resulting URL is then opened as
-   * by {@link openUrl}.
+   * by {@link openUrl}, and that open's promise is returned.
    *
    * When the `copy` option is set, the query text is also copied to the clipboard.
    *
@@ -1257,7 +1374,7 @@ interface PopClip {
       verbatim?: boolean;
       /**
        * Whether to copy the query text to the clipboard, overriding the app's
-       * defqault behaviour for this call.
+       * default behaviour for this call.
        */
       copy?: boolean;
       /**
@@ -1278,7 +1395,7 @@ interface PopClip {
        */
       backgroundTab?: boolean;
     },
-  ): boolean;
+  ): Promise<void>;
 
   /**
    * Share items with a named macOS sharing service.
@@ -1296,11 +1413,19 @@ interface PopClip {
    *
    * The list of available sharing services is determined by the user's system configuration.
    *
+   * Returns a promise that resolves when the share completes (or when the user cancels the
+   * share UI), and rejects if macOS reports that the share failed.
+   * The share UI can stay open indefinitely, so only await this if your action needs to
+   * wait for the outcome.
+   *
    * @param serviceName The name of the sharing service to use.
    * @param items An array of items to share. Each item can be a string, a {@link RichString} object, or a {@link UrlObject}.
    * @throws If the service name is not recognized, or if the service cannot handle the supplied items, an error is thrown.
    */
-  share(serviceName: string, items: (string | RichString | UrlObject)[]): void;
+  share(
+    serviceName: string,
+    items: (string | RichString | UrlObject)[],
+  ): Promise<void>;
 }
 
 /**
@@ -1309,12 +1434,81 @@ interface PopClip {
 interface Util {
   /**
    * Localize an English string into the current user interface language, if possible.
-   * This will work for strings which match an existing string in PopClip's user interface.
+   * This will work for strings which match the name of a built-in action.
    *
    * @param string The string to localize.
    * @return The localized string, or the original string if no localized version was avaiable.
+   * @deprecated This is only used by the Paste and Enter and Paste and Match Style extensions
+   * to localise their displayed action titles and is not recommended for general use.
    */
   localize(string: string): string;
+
+  /**
+   * Whether macOS's Dictionary Services has a definition for this text — that is, whether the
+   * text as a whole is a term in one of the dictionaries the user has enabled.
+   *
+   * @param text The text to look up.
+   *
+   * @example
+   * ```js
+   * if (util.hasDictionaryDefinition(popclip.input.text)) { ... }
+   * ```
+   */
+  hasDictionaryDefinition(text: string): boolean;
+
+  /**
+   * The definition of this text from macOS's Dictionary Services, as plain text, or
+   * `undefined` if the text has no definition.
+   *
+   * To open the text in the Dictionary app instead of reading its definition, use
+   * {@link PopClip.openUrl | popclip.openUrl} with a `dict://` URL.
+   *
+   * @param text The text to define.
+   */
+  getDictionaryDefinition(text: string): string | undefined;
+
+  /**
+   * The languages the system spell checker can check on this Mac, as objects pairing the spell
+   * checker's language code (for example `"en"`, `"de"`, `"pt_BR"`) with a display name
+   * localized for the user's locale. Suitable for building a language option's `values` and
+   * `valueLabels`.
+   */
+  getSpellingLanguages(): { code: string; name: string }[];
+
+  /**
+   * The user's preferred languages (per macOS Language settings), filtered to those the spell
+   * checker can check.
+   */
+  getPreferredSpellingLanguages(): string[];
+
+  /**
+   * Whether the text contains no misspellings, checked in the given language.
+   *
+   * The language must be a code from {@link Util.getSpellingLanguages | getSpellingLanguages};
+   * any other value throws, so intersect a saved option value with the available list before
+   * passing it — a saved language can go stale.
+   *
+   * @param text The text to check.
+   * @param options `language`: the spell checker language code to check in.
+   */
+  checkSpelling(text: string, options: { language: string }): boolean;
+
+  /**
+   * Replacement guesses for a misspelled word, in the given language. Guesses are returned
+   * only when the whole text is a single misspelled word — a sentence containing a
+   * misspelling is not a candidate for replacement, so it yields an empty array, as do
+   * correctly-spelled words and misspellings or non-words that the checker has no suggestions for.
+   *
+   * The same language rule as {@link Util.checkSpelling | checkSpelling} applies.
+   *
+   * @param text The text to get guesses for.
+   * @param options `language`: the spell checker language code; `limit`: cap the number of
+   * guesses returned (omit for all).
+   */
+  getSpellingGuesses(
+    text: string,
+    options: { language: string; limit?: number },
+  ): string[];
 
   /**
      Get information about the current locale as configures in macOS settings.

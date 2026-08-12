@@ -8,7 +8,10 @@
   "license": "MIT",
   "scripts": {
     "check": "tsc --noEmit",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch --out .preview",
+    "docs:serve": "bunx --yes live-server .preview",
+    "preview": "bunx --yes concurrently --kill-others --names typedoc,serve \"bun run docs:watch\" \"bun run docs:serve\""
   },
   "types": "./popclip.d.ts",
   "repository": {
