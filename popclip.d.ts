@@ -1123,10 +1123,10 @@ interface PopClip {
    *
    * The `target` option says where PopClip posts the key events:
    *
-   * - `app` (the default) posts to the process of the application PopClip is acting on, using
+   * - `session` (the default) posts to the session event tap, `kCGSessionEventTap`.
+   * - `app` posts to the process of the application PopClip is acting on, using
    *   `CGEventPostToPid()`. This is the only target aimed at a particular process, so the keys
    *   arrive there whatever holds keyboard focus at the time.
-   * - `session` posts to the session event tap, `kCGSessionEventTap`.
    * - `hid` posts to the HID event tap, `kCGHIDEventTap`.
    *
    * Where the events go from a tap is up to the system. If a key combo does not have the effect
@@ -1146,7 +1146,7 @@ interface PopClip {
   pressKey(
     key: string | number,
     modifiers?: number,
-    options?: { target?: "app" | "session" | "hid" },
+    options?: { target?: "session" | "app" | "hid" },
   ): Promise<void>;
 
   /**
@@ -1161,7 +1161,7 @@ interface PopClip {
    * does not parse, the call throws and nothing is pressed.
    *
    * @param options The same options as {@link pressKey | pressKey()}: `target` says where the
-   * presses are posted (`app`, `session` or `hid`).
+   * presses are posted (`session`, the default, or `app` or `hid`).
    *
    * @returns A promise that resolves once the whole sequence has run, and rejects if the presses
    * could not be made.
@@ -1173,7 +1173,7 @@ interface PopClip {
    */
   pressKeys(
     sequence: (string | number)[],
-    options?: { target?: "app" | "session" | "hid" },
+    options?: { target?: "session" | "app" | "hid" },
   ): Promise<void>;
 
   /**
