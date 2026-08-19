@@ -593,6 +593,7 @@ interface Extension<CustomOptions = Options> extends ActionProperties {
   color?: string;
   authAccountLabel?: string;
   offersMultipleInstances?: boolean;
+  shellScriptRationale?: string;
   module?: string;
 }
 
