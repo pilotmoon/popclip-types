@@ -1,21 +1,20 @@
 {
   "name": "@popclip/types",
-  "version": "1.6959.1",
+  "version": "2.6159.0",
   "devDependencies": {
-    "typedoc": "0.25.13",
-    "typescript": "5.4.5"
+    "typescript": "7.0.2"
   },
   "license": "MIT",
   "scripts": {
-    "check": "tsc --noEmit",
-    "docs": "typedoc",
-    "docs:watch": "typedoc --watch --out .preview",
-    "docs:serve": "bunx --yes live-server .preview",
-    "preview": "bunx --yes concurrently --kill-others --names typedoc,serve \"bun run docs:watch\" \"bun run docs:serve\""
+    "check": "bun run build && tsc --noEmit",
+    "build": "bun run build.ts"
   },
   "types": "./popclip.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/pilotmoon/popclip-types"
-  }
+  },
+  "files": [
+    "popclip.d.ts"
+  ]
 }

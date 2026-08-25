@@ -1,931 +1,77 @@
-/*
-This is a TypeScript definitions file for PopClip's JavaScript interface.
-*/
+/* ==========================================================================
+   PopClip JavaScript API -- TypeScript definitions
+   ==========================================================================
+
+   Version 2.6159.0, describing PopClip build 6159.
+
+   This file declares everything an extension's JavaScript can see. It is the
+   `@popclip/types` npm package, and is also served at
+   https://www.popclip.app/dev/popclip.d.ts
+
+   Changes between versions are listed at
+   https://github.com/pilotmoon/popclip-types/blob/main/CHANGELOG.md
+
+   It is in four sections:
+
+     Runtime API              the `popclip`, `util` and `pasteboard` globals,
+                              and the other objects a running script works with
+     Module-based extensions  writing an extension as a module:
+                              `defineExtension()`, `Extension`, `Action`,
+                              options, `require`
+     Static config            the extension config format, which `Extension`
+                              extends
+     Environment              `Buffer`, `Blob`, `URL`, `XMLHttpRequest`,
+                              timers, and the rest of the environment
+
+   Every declaration is ambient and global. Nothing needs to be imported.
+
+   Setting up a TypeScript project
+   -------------------------------
+
+   This file is self-contained. A tsconfig needs only:
+
+       {
+         "compilerOptions": {
+           "lib": ["ES2023"],
+           "types": ["@popclip/types"],
+           "module": "preserve",
+           "moduleResolution": "bundler",
+           "verbatimModuleSyntax": true,
+           "strict": true,
+           "noEmit": true
+         }
+       }
+
+   Do not add "dom" to `lib` or "node" to `types`. Both declare large APIs
+   PopClip does not provide, and both give `Blob` and `TextEncoder` shapes
+   wider than the ones PopClip implements. With them present, code that
+   cannot run will type check.
+
+   Writing an extension in TypeScript
+   ----------------------------------
+
+   Call `defineExtension()` with the extension object. Its parameter is typed,
+   so the whole object is checked and autocompleted in place with no
+   annotations. See that function's documentation for the options pattern.
+
+   The prose documentation, with tutorials and worked examples, is at
+   https://www.popclip.app/dev/
+   ========================================================================== */
+
+/* ==========================================================================
+   Runtime API
+   ==========================================================================
+
+   The objects and functions available to an extension's JavaScript while it
+   runs: the `popclip` global, through which a script reads its input and acts
+   on it; `util` and `pasteboard`; and a few free functions.
+   ========================================================================== */
 
 /**
- * An object giving strings for the different languages PopClip supports. See  {@link LocalizableString}.
+ * The global `popclip` object encapsulates the user's current interaction with PopClip, and provides methods
+ * for performing various actions. It implements  {@link PopClip}.
  */
-interface StringTable {
-  /** English (US) language string. */
-  en: string;
-  /** English (UK) language string. */
-  "en-GB"?: string;
-  /** Danish language string. */
-  da?: string;
-  /** German language string. */
-  de?: string;
-  /** Spanish language string. */
-  es?: string;
-  /** French language string. */
-  fr?: string;
-  /** Italian language string. */
-  it?: string;
-  /** Japanese language string. */
-  ja?: string;
-  /** Korean language string. */
-  ko?: string;
-  /** Dutch language string. */
-  nl?: string;
-  /** Polish language string. */
-  pl?: string;
-  /** Brazilian Portuguese language string. */
-  "pt-BR"?: string;
-  /** Russian language string. */
-  ru?: string;
-  /** Slovak language string. */
-  sk?: string;
-  /** Turkish language string. */
-  tr?: string;
-  /** Vietnamese language string. */
-  vi?: string;
-  /** Simplified Chinese language string. */
-  "zh-Hans"?: string;
-  /** Traditional Chinese language string. */
-  "zh-Hant"?: string;
-  /** Any other strings. */
-  [code: string]: string | undefined;
-}
-
-/**
- * A type to represent a localizable string.
- *
- * The value may be either a string or an object.
- * If you supply a string, that string is used.
- * If you supply a  {@link StringTable} object, PopClip will
- * display the string for the user's preferred language if possible, with fallback to the `en` string.
- *
- * @example
- * ```js
- * option.label = "Color" // just use this string
- * option.label = { en: "Color", "en-GB": "Colour", fr: "Couleur", "zh-Hans": "颜色" }
- * ```
- */
-type LocalizableString = string | StringTable;
-
-/**
- * Represents the state of the four modifier keys. The value is true when the key is held down
- * at the time the action is invoked.
- * See {@link PopClip.modifiers}.
- */
-interface Modifiers {
-  /** Shift (⇧) key state. */
-  shift: boolean;
-  /** Control (⌃) key state. */
-  control: boolean;
-  /** Option (⌥) key state. */
-  option: boolean;
-  /** Command (⌘) key state. */
-  command: boolean;
-}
-
-/**
- * A requirement is specified in the {@link Action.requirements} array as a string.
- *
- * @example
- * ```js
- * ["paste", "!urls", "option-goFishing=1"]
- * ```
- */
-type Requirement =
-  | "text"
-  | "cut"
-  | "paste"
-  | "formatting"
-  | "url"
-  | "urls"
-  | "email"
-  | "emails"
-  | "path"
-  | `option-${string}=${string}`;
-
-/** Negated form of  {@link Requirement}. */
-type NegatedRequirement = `!${Requirement}`;
-
-/**
- * Strings which can be used to specify the  {@link Action.before} action.
- */
-type BeforeStep = "cut" | "copy" | "paste" | "paste-plain";
-
-/**
- * Strings which can be used to specify the  {@link Action.after} action.
- */
-type AfterStep =
-  | BeforeStep
-  | "popclip-appear"
-  | "show-status"
-  | "copy-result"
-  | "paste-result"
-  | "show-result"
-  | "preview-result";
-
-/**
- * Declares information about an app or website that this extension interacts with.
- */
-interface AssociatedApp {
-  /**
-   * Name of the app. For example "Scrivener"
-   */
-  name: string;
-
-  /**
-   * Web page where user can obtain the app, e.g. "https://www.literatureandlatte.com/scrivener".
-   */
-  link: string;
-
-  /**
-   * Indicates whether PopClip should check for the presence of the app on the computer. Default is false.
-   */
-  checkInstalled?: boolean;
-
-  /**
-   * List of possible bundle identifiers of this app.
-   */
-  bundleIdentifiers?: string[];
-}
-
-/**
- * A population function dynamically generates the actions for the extension. See  {@link Extension.actions}.
- * @param input The selected text and related properties. (Same object as  {@link PopClip.input}.)
- * @param options Current values of the options for this extension. (Same object as  {@link PopClip.options}.)
- * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
- * @returns A single action, an array of actions.
- */
-type PopulationFunction<CustomOptions = Options> = (
-  input: Input,
-  options: CustomOptions,
-  context: Context,
-) => (Action | ActionFunction)[] | Action | ActionFunction | void;
-
-/**
- * Object returned by  {@link Extension.auth} when there is an authentication flow to kick off
- */
-type AuthFlowFunction = (
-  url: string,
-  params?: { [key: string]: string | undefined },
-  expect?: string[],
-) => Promise<any>;
-
-/**
- * Credentials used in auth function
- * */
-interface AuthInfo {
-  /** Value of `username` option (will be empty string if none defined) */
-  username: string;
-  /** Value of `password` option (will be empty string if none defined) */
-  password: string;
-  /** An appropriate value to use as the redirection URL in authorization flows for this extension.
-   * Example output:
-   * `http://localhost:58906/callback/com.pilotmoon.popclip.extension.todoist/auth`
-   */
-  redirect: string;
-  /** Extension display name */
-  name: string;
-  /** Extension identifier */
-  identifier: string;
-}
-
-/**
- * Object form of the value returned by {@link Extension.auth}, for when the extension has
- * more than just the secret to hand back. Returning a bare string is equivalent to
- * returning `{ secret: theString }`.
- */
-interface AuthResult {
-  /** The secret to store (e.g. an access token). Saved as the extension's `authsecret`. */
-  secret: string;
-  /** Optional account identifier to display, e.g. an email or username ("Signed in as …"). */
-  label?: string;
-  /** Optional token lifetime in seconds, as reported by the auth server (its `expires_in`).
-   * PopClip records it with the sign-in time; once it elapses the app treats the extension
-   * as signed out and prompts the user to sign in again. */
-  expiresIn?: number;
-}
-
-/**
- * Function signature of the  {@link Extension.auth} method.
- */
-type AuthFunction = (
-  info: AuthInfo,
-  flow: AuthFlowFunction,
-) => Promise<string | AuthResult>;
-
-/**
- * Properties that define how an icon is interpreted.
- */
-interface IconProperties {
-  /**
-   * If true, the supplied icon will be displayed with its original color instead of being filled in white/black. Default is false.
-   */
-  preserveColor?: boolean;
-  /**
-   * If true, the supplied icon will be displayed with its original aspect ratio instead of being scaled to fit a square. Default is false.
-   */
-  preserveAspect?: boolean;
-  /**
-   * If true, the supplied icon will be drawn horizontally flipped. Default is false.
-   */
-  flipX?: boolean;
-  /**
-   * If true, the supplied icon will be drawn vertically flipped. Default is false.
-   */
-  flipY?: boolean;
-
-  /**
-   * Move the icon horizontally by the specified distance, expressed as percentage of the icon's width.
-   */
-  moveX?: number;
-
-  /**
-   * Move the icon vertically by the specified distance, expressed as percentage of the icon's height.
-   */
-  moveY?: number;
-
-  /**
-   * Scale the icon by the specified factor, expressed as a percentage of the original size.
-   */
-  scale?: number;
-
-  /**
-   * Rotate the icon anticlockwise by the specified angle, expressed in degrees.
-   */
-  rotate?: number;
-
-  /**
-    Draw the icon inside a square.
-    */
-  square?: boolean;
-
-  /**
-   * Draw the icon inside a circle.
-   */
-  circle?: boolean;
-
-  /**
-   * Draw the icon inside a magnifying glass shape.
-   */
-  search?: boolean;
-
-  /**
-   * Draw a strike-through line over the icon.
-   */
-  strike?: boolean;
-
-  /**
-   * Draw the enclosing shape as a solid shape.
-   */
-  filled?: boolean;
-
-  /**
-   * For text icons only. Draw the text using a monospaced font.
-   */
-  monospaced?: boolean;
-}
-
-/**
- * Properties common to Action and Extension
- */
-interface ActionProperties extends IconProperties {
-  /**
-   * A unique identifying string. An identifier for an action can be any string of your choosing.
-   */
-  identifier?: string;
-
-  /**
-   * The action's title.
-   *
-   * If no title is defined here, the extension's [`[name]] will be used, if any.
-   */
-  title?: LocalizableString;
-
-  /**
-   * A string to define the action's icon.
-   *
-   * If no icon is defined here, the extension's {@link Extension.icon | icon} will be used, if any.
-   * Setting to `null` explicitly sets the action to have no icon.
-   */
-  icon?: string | null;
-
-  /**
-   * An array of conditions which must be met for this action to appear — see  {@link Requirement}.
-   *
-   * * If no array is specified here, the action takes the value of  {@link Extension.requirements}.
-   * * If no array is specified there either, the action takes the default value `["text"]`.
-   *
-   * When multiple conditions are specified, all of them must be satisfied.
-   *
-   * An empty array (`[]`) indicates no requirements at all, meaning the action will always appear.
-   *
-   * This property has no effect on dynamically generated actions.
-   */
-  requirements?: Array<Requirement | NegatedRequirement>;
-
-  /**
-   * Array of bundle identifiers for which the extension should appear. The action will only
-   * appear if PopCLip is used in one of the specified apps.
-   *
-   * This property has no effect on dynamically generated actions.
-   */
-  requiredApps?: string[];
-
-  /**
-   * Array of bundle identifiers for which the extension should not appear. The action will not
-   * appear if PopClip is used in any of the specified apps.
-   *
-   * This property has no effect on dynamically generated actions.
-   */
-  excludedApps?: string[];
-
-  /**
-   * A regular expression to decide whether this action appears in the popup.
-   *
-   * * If no regex is specified here, the action takes the value of  {@link Extension.regex}.
-   * * If no regex is specified there either, the action will match any input.
-   *
-   * You may express the value either as a
-   * [JavaScript regular expression literal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions)
-   * (or otherwise constructed `RegExp` object), or as a string.
-   *
-   * * If you supply a `RegExp` it will be evaluated in the JavaScript engine.
-   * * If you supply a string it will be evaluated by macOS natively using the `NSRegularExpression` API (same as for 'classic' PopClip extensions).
-   *
-   * If the regex matches the selected text, the action will be shown in the popup and
-   * the first occurrence of the matched text is accessible later via {@link Input.matchedText | matchedText}.
-   *
-   * If there is no match, the action is excluded from the popup.
-   *
-   * The regex's `lastIndex` is reset before and after each invocation, so the `g` (global) and `y` (sticky) flags have no effect.
-   *
-   * This property has no effect on dynamically generated actions.
-   *
-   * @example
-   * ```js
-   * regex = /abc/i   // Example regex 'abc' with 'i' (case insensitive) flag
-   *                  // Matches abc, ABC, Abc, etc.
-   * ```
-   */
-  regex?: RegExp | string;
-
-  /**
-   * Declares the application or website associated with this action, if any.
-   */
-  app?: AssociatedApp;
-  apps?: AssociatedApp[];
-
-  /**
-   * An optional step to peform before the main action.
-   */
-  before?: BeforeStep;
-
-  /**
-   * An optional step to peform after the main action.
-   */
-  after?: AfterStep;
-
-  /**
-   * Whether PopClip will capture HTML and Markdown content for the selection. Default is no.
-   */
-  captureHtml?: boolean;
-
-  /**
-   * Whether PopClip will capture RTF (Rich Text Format) content for the selection. Default is no.
-   */
-  captureRtf?: boolean;
-
-  /**
-   * Whether PopClip's popup should stay on screen after clicking this action's button. Default is no.
-   */
-  stayVisible?: boolean;
-
-  /**
-   * Whether the pasteboard should be restored to its original state after `paste-result`.
-   */
-  restorePasteboard?: boolean;
-
-  // static properties for benefit of JSON Schema
-  shortcutName?: string;
-  serviceName?: string;
-  url?: string;
-  keyCombo?: string | number;
-  keyCombos?: Array<string | number>;
-  applescript?: string;
-  applescriptFile?: string;
-  applescriptCall?: {
-    handler: string;
-    parameters?: string[];
-  };
-  shellScript?: string;
-  shellScriptFile?: string;
-  interpreter?: string;
-  javascript?: string;
-  javascriptFile?: string;
-}
-
-/**
- * An action function is called when the user clicks the action button in PopClip. This is where
- * the extension does its main work.
- * @param input The selected text and related properties. (Same object as  {@link PopClip.input}.)
- * @param options Current values of the options for this extension. (Same object as  {@link PopClip.options}.)
- * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
- */
-type ActionFunction<CustomOptions = Options> = (
-  input: Input,
-  options: CustomOptions & AuthOptions,
-  context: Context,
-) => Promise<string | void> | string | void;
-
-/**
- * A function that can be used to verify the extension's functionality.
- * Test function should throw error if test test fails and exit normally if it succeeds.
- * PopClip doesn't currently call the test function but you can use it to test your extension
- * during development.
- */
-type TestFunction = () => Promise<void> | void;
-
-/**
- * **Action** represents the properties of a single action.
- * If `code` is omitted, the action displays a disabled title/icon only.
- */
-interface Action<CustomOptions = Options> extends ActionProperties {
-  readonly code?: ActionFunction<CustomOptions>;
-
-  /**
-   * If `true`, this entry is a separator, rather than an action. It causes a section break
-   * between buttons in a submenu. It has no effect outside submenus. Use it on its own; other properties are ignored.
-   *
-   * @example
-   * ```js
-   * actions: [
-   *   { title: ..., icon: ... },
-   *   { separator: true }
-   *   { title: ..., icon: ... },
-   * ]
-   * ```
-   */
-  readonly separator?: boolean;
-
-  /**
-   * If set, clicking this action opens a submenu containing these child actions.
-   *
-   * - If it's an array, the supplied actions are used in the submenu.
-   * - If it's a population function, it is called when the submenu opens to generate its
-   *   actions dynamically. A submenu function requires the `dynamic` entitlement.
-   *
-   * The action's own title and icon label the submenu. If the action also defines `code`,
-   * it stays directly clickable in addition to offering the submenu.
-   */
-  readonly submenu?:
-    | (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
-    | PopulationFunction<CustomOptions>;
-
-  /**
-   * The action asks to be the popup's primary button — the one that is centred above
-   * the pointer when the popup appears. Used by the built in Copy and Paste actions.
-   * If more than one visible button wants primary display, the leftmost button wins.
-   */
-  readonly wantsPrimaryDisplay?: boolean;
-
-  /**
-   * A submenu asks to be already open when the popup appears, instead of waiting to be
-   * clicked. PopClip opens it directly, with a back button to reach the rest of the popup.
-   * This is used by the built-in Spelling action.
-   *
-   * If more than one submenu asks for initial display, the first one found wins (left-to-right
-   * search including subfolders). It has no effect on an action that is not a submenu.
-   */
-  readonly wantsInitialDisplay?: boolean;
-}
-
-// included for JSON Schema
-type Entitlement = "network" | "dynamic" | "script";
-
-/**
- * The value an AppleScript returns: a string, number or boolean, an array for a list result
- * (possibly nested), or undefined when the script returns no value. Results of any other type
- * (such as records or object specifiers) come through in their string form, or undefined when
- * they have none.
- */
-type AppleScriptResult =
-  | string
-  | number
-  | boolean
-  | undefined
-  | AppleScriptResult[];
-
-/**
- * Options for {@link PopClip.runAppleScript} and {@link PopClip.runAppleScriptFile}.
- */
-interface AppleScriptOptions {
-  /**
-   * Name of a handler (subroutine) in the script to call. Without it, the script runs from
-   * top to bottom.
-   */
-  handler?: string;
-  /**
-   * Arguments for the handler, in order — strings and booleans only. Requires `handler`.
-   * Passing values as handler parameters is preferable to interpolating them into the script
-   * source, which invites escaping bugs.
-   */
-  parameters?: (string | boolean)[];
-  /**
-   * System permissions the script needs, resolved right before it runs. PopClip shows the
-   * system consent prompt for any the user has not yet decided; if access is denied, the
-   * call rejects and PopClip directs the user to the relevant System Settings pane. The only
-   * recognised value is currently `reminders`.
-   */
-  permissions?: "reminders"[];
-}
-
-/**
- * The Extension object defines the PopClip extension.
- */
-interface Extension<CustomOptions = Options> extends ActionProperties {
-  /**
-   * Defines the user-configurable options for this extension.
-   */
-  options?: readonly Option[];
-
-  /**
-   * If you define this function then PopClip will display a 'sign in' button in the options UI. When the user clicks the button,
-   * PopClip will call this function with an `info` object and an `flow` callback.
-   *
-   * If the sign in needs a username and password, you'll also need to define `username` and `password` options. PopClip will then pass the values
-   * of those options in the info parameter. */
-  auth?: AuthFunction;
-
-  /**
-   * Define the actions to go in PopClip's popup. This can be an array or a function.
-   *
-   * - If it's an array, the supplied actions are used in the popup, subject to meeting the
-   *   requirements and regex conditions.
-   *
-   * - If it's a population function, it is called by PopClip to dynamically populate the popup with actions from this extension.
-   *   Setting requirements and regex keys has no effect on dynamic actions — the function itself is responsible for deciding what actions to show.
-   *   Population function requires the `dynamic` entitlement.
-   */
-  actions?:
-    | (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
-    | PopulationFunction<CustomOptions>;
-
-  /**
-   * Simplified property to define a single action.
-   */
-  action?: Action<CustomOptions> | ActionFunction<CustomOptions>;
-
-  /**
-   * Makes the whole extension a single button that opens a submenu of child actions, as an
-   * alternative to `actions`/`action`. Same shape as {@link Action.submenu}: a static array
-   * of actions, or a population function (requires the `dynamic` entitlement).
-   */
-  submenu?:
-    | (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
-    | PopulationFunction<CustomOptions>;
-
-  /**
-   * Exported test function for use during development.
-   */
-  test?: TestFunction;
-
-  // the following are static-only properties, included for the benefit of the JSON Schema generation
-  name?: LocalizableString;
-  entitlements?: Entitlement[];
-  popclipVersion?: number;
-  macosVersion?: string;
-  showAs?: "icon" | "text";
-  color?: string;
-  authAccountLabel?: string;
-  offersMultipleInstances?: boolean;
-  shellScriptRationale?: string;
-  module?: string;
-}
-
-/**
- * The possible values for `type` of {@link Option}.
- */
-type OptionType =
-  | "string"
-  | "boolean"
-  | "multiple"
-  | "password"
-  | "heading"
-  | "secret";
-
-/**
- * Defines a single extension option.
- */
-interface OptionBase {
-  /**
-   * An identifying string for this option.
-   */
-  readonly identifier: string;
-
-  /**
-   * The kind of option, one of:
-   *  * `string`: a text box for free text entry,
-   *  * `boolean`: a check box,
-   *  * `multiple`: multiple-choice drop-down with predefined options,
-   *  * `secret`: concealed text entry field (persisted in user's keychain),
-   *  * `password`: concealed text entry field (not persisted, only passed to auth function),
-   *  * `heading`: adds a heading in the user interface, but does not actually define an option
-   */
-  readonly type: OptionType;
-
-  /**
-   * A short label for this option.
-   */
-  readonly label?: LocalizableString;
-
-  /**
-   * An optional longer explanantion of this option, to be shown in the UI.
-   */
-  readonly description?: LocalizableString;
-
-  /*
-   * If true, this option will be hidden in the prefs window. Default is false.
-   */
-  readonly hidden?: boolean;
-
-  /*
-   * If true, this option will be be inset to the right of its label, instead of below it. Default is false.
-   */
-  readonly inset?: boolean;
-}
-
-/**
- A string-valued option.
-*/
-interface StringOption extends OptionBase {
-  readonly type: "string";
-  /**
-   * The default value of the option. If omitted, `string` options default to the empty string.
-   */
-  readonly defaultValue?: string;
-}
-
-/**
- * A multiple-choice option.
- */
-interface MultipleOption extends OptionBase {
-  readonly type: "multiple";
-  /**
-   * The default value of the option. If omitted, `multiple` options default to None if `allowNone`
-   * is set, or else the first item in the list.
-   */
-  readonly defaultValue?: string;
-
-  /**
-   * The possible values for a `multiple` option.
-   */
-  readonly values?: readonly string[];
-
-  /**
-   * Display names corresponding to the entries in the {@link values} array. These are shown in the option UI.
-   * If ommitted, the raw value strings are shown instead.
-   */
-  readonly valueLabels?: readonly LocalizableString[];
-
-  /**
-   * If true, the UI offers an "Other…" row in addition to the defined {@link values},
-   * allowing the user to type a value of their own.
-   */
-  readonly allowOther?: boolean;
-
-  /**
-   * If true, the option UI offers a "None" row in addition to the defined {@link values}, whose value is the
-   * empty string. An option with `allowNone` and no {@link defaultValue} defaults to None
-   * rather than to the first value.
-   */
-  readonly allowNone?: boolean;
-}
-
-/**
- * A boolean option.
- */
-interface BooleanOption extends OptionBase {
-  readonly type: "boolean";
-  /**
-   * The default value of the option. If omitted, `boolean` options default to true.
-   */
-  readonly defaultValue?: boolean;
-  /**
-   * An icon for this option. It is only displayed for boolean options, next to the check box.
-   */
-  readonly icon?: string;
-}
-
-/**
- * A concealed string option.
- */
-interface PasswordOption extends OptionBase {
-  readonly type: "password" | "secret";
-}
-
-/**
- * A heading option, which does not define an actual option, but adds a heading in the preferences window.
- */
-interface HeadingOption extends OptionBase {
-  readonly type: "heading";
-}
-
-/**
- Represents a single option in the extension's preferences.
-*/
-type Option =
-  | StringOption
-  | MultipleOption
-  | BooleanOption
-  | PasswordOption
-  | HeadingOption;
-
-// Create a type mapping from Option Type to TypeScript types
-type OptionTypeMapping = {
-  string: string;
-  secret: string;
-  multiple: string;
-  boolean: boolean;
-};
-
-// Helper type to extract the type for each option
-type ExtractType<T extends Option> = T["type"] extends keyof OptionTypeMapping
-  ? OptionTypeMapping[T["type"]]
-  : never;
-
-// Helper type to exclude `never` properties
-type ExcludeNever<T> = {
-  [K in keyof T as T[K] extends never ? never : K]: T[K];
-};
-
-// Create a utility type to infer the OmnivoreOptions type
-type InferOptions<T extends readonly Option[]> = ExcludeNever<{
-  readonly [K in T[number]["identifier"]]: ExtractType<
-    Extract<T[number], { identifier: K }>
-  >;
-}>;
-
-/**
- * Represents a generic range, as a location and length
- */
-interface Range {
-  location: number;
-  length: number;
-}
-
-/**
- * An array of strings with an addiontal `ranges` property defining the source of the data in the orignal string.
- */
-interface RangedStrings extends Array<string> {
-  ranges: Range[];
-}
-
-/**
- * Input defines properties to access the input text contents.
- */
-interface Input {
-  /**
-   * The plain text selected by the user. If there is no selected text, this will be the empty string.
-   */
-  text: string;
-
-  /**
-   * If the action specified {@link Action.requirements} or a {@link Action.regex} to match the input, this will be the matching part of the text.
-   * Otherwise, it will be the same string as  {@link text}.
-   */
-  matchedText: string;
-
-  /**
-   * If the action specified a {@link Action.regex | regex} to match the input, this will be the result of the the match.
-   *
-   * You can use this to access any capture groups from the regex.
-   *
-   * If the regex was specified as a JavaScript regex, the value is a return value from JavaScript's
-   * [RegExp.prototype.exec()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec) method.
-   *
-   * If the regex was specified as an ICU regex in the static config, the value is the array of capture components.
-   *
-   * @example
-   * ```js
-   * // text: "apple", regex: /.(.)/
-   * selection.regexResult[0] // "ap" (full match)
-   * selection.regexResult[1] // "p" (capture group 1)
-   * ```
-   */
-  regexResult?: RegExpMatchArray | string[] | null;
-
-  /**
-   * HTML content (if `captureHtml` is true).
-   */
-  html: string;
-
-  /**
-   * XHTML content (if `captureHtml` is true).
-   */
-  xhtml: string;
-
-  /**
-   * Markdown content (if `captureHtml` is true).
-   */
-  markdown: string;
-
-  /**
-   * RTF content (if `captureRtf` is true).
-   */
-  rtf: string;
-
-  /**
-   * Data of various kinds, that PopClip detected in the selected text.
-   */
-  data: {
-    /**
-     * HTTP ot HTTPS urls.
-     */
-    urls: RangedStrings;
-    /**
-     * Other protocols or app urls e.g. `ftp:`, `omnifocus:`, `craftdocs:` etc. (PopClip has a pre-defined allowlist
-     * for custom URL schemes.)
-     */
-    nonHttpUrls: RangedStrings;
-    /**
-     * Email addresses.
-     */
-    emails: RangedStrings;
-    /**
-     * Local file paths.
-     * */
-    paths: RangedStrings;
-  };
-
-  /**
-   * Unprocessed selection contents indexed by UTI.
-   */
-  content: PasteboardContent;
-
-  /**
-  Indicate if the text content is *just* a web URL (or URL-like string
-  such as `popclip.app`), allowing for leading and trailing whitespace.
-  */
-  isUrl: boolean;
-}
-
-/**
- *  Properties relating the context surrounding the selected text.
- */
-interface Context {
-  /**
-   * Indicates whether the text area supports formatting.
-   */
-  hasFormatting: boolean;
-
-  /**
-   * This property is true iff the Paste command is enabled in the current app.
-   */
-  canPaste: boolean;
-
-  /**
-   * This property is true iff text was selected.
-   */
-  canCopy: boolean;
-
-  /**
-   * This property is true iff text was selected and the app's Cut command is enabled.
-   */
-  canCut: boolean;
-
-  /**
-   * If the current app is a compatible browser, this will be the page URL.
-   */
-  browserUrl: string;
-
-  /**
-   * If the current app is a compatible browser, this will be the page title.
-   */
-  browserTitle: string;
-
-  /**
-   * The name of the current app, for example `Drafts`.
-   */
-  appName: string;
-
-  /**
-   * The bundle identitifier of the current app, for example `com.agiletortoise.Drafts-OSX`.
-   */
-  appIdentifier: string;
-}
-
-/**
- * Represents the current values of the extension's settings.
- */
-interface Options {
-  readonly [identifier: string]: string | boolean;
-}
-
-/**
- * The `authsecret` property has the special behaviour of throwing an `Error` with the message 'Not signed in' if it is accessed while either
- * undefined or holding an empty string.
- */
-interface AuthOptions {
-  /**
-   * The stored value that was returned from the `auth()` function.
-   */
-  authsecret: string;
-}
+declare const popclip: PopClip;
 
 /**
  * This interface describes the methods and properties of the global {@link popclip} object.
@@ -956,10 +102,15 @@ interface PopClip {
 
   /**
    * If the target app's Paste command is available, this method places the given string on the pasteboard
-   * and then invokes the target app's Paste comand. If the `restore` flag is set in the options, it will
+   * and then invokes the target app's Paste command. If the `restore` flag is set in the options, it will
    * then restore the original pasteboard contents.
    *
    * If the target app's Paste command is not available, it behaves as {@link copyText} instead.
+   *
+   * Returns a promise that resolves once the paste command has been delivered to the app,
+   * after the pasteboard write was confirmed and — if `restore` is set — after the
+   * pasteboard was restored. It rejects if the write never appears on the
+   * pasteboard or the restore fails.
    *
    * @example
    *
@@ -969,10 +120,6 @@ interface PopClip {
    * // place "Hello", then restore the original pasteboard contents
    * await popclip.pasteText("Hello", {restore: true});
    * ```
-   * Returns a promise that resolves once the paste command has been delivered to the app,
-   * after the pasteboard write was confirmed and — if `restore` is set — after the
-   * pasteboard was restored. It rejects if the write never appears on the
-   * pasteboard or the restore fails.
    *
    * @param text The plain text string to paste
    * @param options
@@ -1008,16 +155,16 @@ interface PopClip {
    *
    * Returns a promise. For `cut` and `copy` it resolves once the app has placed the
    * resulting content on the pasteboard and any transform has been applied.
-   * For `paste` it resolves once the once the command has been delivered to the app. An unknown
+   * For `paste` it resolves once the command has been delivered to the app. An unknown
    * command or transform value throws immediately, doing nothing.
    *
    * @param command Either `cut`, `copy` or `paste`.
    * @param options Options for the command.
    *
    * @example
-   * ````
+   * ```js
    * await popclip.performCommand("copy")
-   * ````
+   * ```
    */
   performCommand(
     command: "cut" | "copy" | "paste",
@@ -1046,7 +193,7 @@ interface PopClip {
       style?: "compact" | "large";
       /**
        * Applies to `compact` display mode only. If `true`, and the app's Paste command is available,
-       * the displayed text will be in a clickable button, which clicked, pastes the full text.
+       * the displayed text will be in a clickable button which, when clicked, pastes the full text.
        */
       preview?: boolean;
     },
@@ -1097,7 +244,12 @@ interface PopClip {
   /**
    * Simulate a key press by the user.
    *
-   * @examples
+   * Some key code and modifier constants are available in {@link Util.constant | util.constant}.
+   *
+   * To press a sequence of combos, with waits between them if needed, see
+   * {@link pressKeys | pressKeys()}.
+   *
+   * @example
    *
    * ```js
    * // press the key combo ⌘B
@@ -1112,13 +264,16 @@ interface PopClip {
    * await popclip.pressKey(0x79, util.constant.MODIFIER_OPTION); // equivalent
    * ```
    *
-   * Some key code and modifier constants are available in {@link Util.constant | util.constant}.
+   * ```js
+   * await popclip.pressKey('command c');
+   * popclip.pressKey('command space', 0, { target: 'hid' });
+   * ```
    *
    * @param key The key to press. When this parameter is a string, PopClip will interpret it as in
    * [Key Press actions](https://www.popclip.app/dev/key-press-actions).
    * When this parameter is a number, PopClip will use that exact key code.
    *
-   * @param modifiers An optional bit mask specifiying additional modifier keys, if any.
+   * @param modifiers An optional bit mask specifying additional modifier keys, if any.
    *
    * @param options Options for the key press.
    *
@@ -1135,14 +290,6 @@ interface PopClip {
    *
    * @returns A promise that resolves once the press has been made, and rejects if it fails.
    * Await it when a later step depends on the press completing.
-   *
-   * ```js
-   * await popclip.pressKey('command c');
-   * popclip.pressKey('command space', 0, { target: 'hid' });
-   * ```
-   *
-   * To press a sequence of combos, with waits between them if needed, see
-   * {@link pressKeys | pressKeys()}.
    */
   pressKey(
     key: string | number,
@@ -1294,7 +441,10 @@ interface PopClip {
    * Any parameters etc. in the URL must be appropriately percent-encoded. JavaScript provides the
    * [encodeURIComponent()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent)
    * function for this. Alternatively you can use the [URL](https://developer.mozilla.org/en-US/docs/Web/API/URL) class,
-   * which is available as a global in PopClip's JavaScript environment.
+   * which is available as a global in PopClip's JavaScript environment. When a `URL`
+   * instance is passed, any `+` characters in it are first replaced with `%20`: a query
+   * built with {@link URLSearchParams} encodes spaces as `+` (form encoding), which not
+   * every receiver interprets as a space, whereas `%20` is unambiguous.
    *
    * Returns a promise that resolves once the request has been delivered to the browser or
    * OS.
@@ -1311,11 +461,11 @@ interface PopClip {
    * popclip.openUrl(mailUrl); // the mailto: link will open in the default mail application
    * ```
    *
-   * @param url URL string or a {@link UrlObject} representing the URL to open.
+   * @param url The URL to open: a string, used exactly as given, or a {@link URL} instance.
    * @param options Options.
    */
   openUrl(
-    url: string | UrlObject,
+    url: string | URL,
     options?: {
       /**
        * Bundle identifier of the app to open the URL with. For example `"com.google.Chrome"`.
@@ -1406,9 +556,9 @@ interface PopClip {
    * // share a string with the Messages service
    * popclip.share("com.apple.share.Messages.window", ["Hello, world!"]);
    * // share a URL with the Safari Reading List service
-   * popclip.share("com.apple.share.System.add-to-safari-reading-list", [{ url: "https://example.com" }]);
-   * // share a an html string with the Notes service
-   * const item = new RichString("Some <b>simple</b> html", { format: html })
+   * popclip.share("com.apple.share.System.add-to-safari-reading-list", [new URL("https://example.com")]);
+   * // share an html string with the Notes service
+   * const item = new RichString("Some <b>simple</b> html", { format: "html" })
    * popclip.share("com.apple.Notes.SharingExtension", [item]);
    * ```
    *
@@ -1420,17 +570,246 @@ interface PopClip {
    * wait for the outcome.
    *
    * @param serviceName The name of the sharing service to use.
-   * @param items An array of items to share. Each item can be a string, a {@link RichString} object, or a {@link UrlObject}.
+   * @param items An array of items to share. A string is shared as plain text; a
+   * {@link RichString} as rich text; a {@link URL} instance, or an object with a
+   * `url` string property, as a URL. (The `{ url }` form uses the string exactly
+   * as given; a `URL` instance gets the `+` to `%20` replacement described at
+   * {@link openUrl}.)
    * @throws If the service name is not recognized, or if the service cannot handle the supplied items, an error is thrown.
    */
   share(
     serviceName: string,
-    items: (string | RichString | UrlObject)[],
+    items: (string | RichString | URL | { url: string })[],
   ): Promise<void>;
 }
 
 /**
- * A container for various utility functions and constants  {@link util} object.
+ * Input defines properties to access the input text contents.
+ */
+interface Input {
+  /**
+   * The plain text selected by the user. If there is no selected text, this will be the empty string.
+   */
+  text: string;
+
+  /**
+   * If the action specified {@link Action.requirements} or a {@link Action.regex} to match the input, this will be the matching part of the text.
+   * Otherwise, it will be the same string as  {@link text}.
+   */
+  matchedText: string;
+
+  /**
+   * If the action specified a {@link Action.regex | regex} to match the input, this will be the result of the match.
+   *
+   * You can use this to access any capture groups from the regex.
+   *
+   * If the regex was specified as a JavaScript regex, the value is a return value from JavaScript's
+   * [RegExp.prototype.exec()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec) method.
+   *
+   * If the regex was specified as an ICU regex in the static config, the value is the array of capture components.
+   *
+   * @example
+   * ```js
+   * // text: "apple", regex: /.(.)/
+   * popclip.input.regexResult[0] // "ap" (full match)
+   * popclip.input.regexResult[1] // "p" (capture group 1)
+   * ```
+   */
+  regexResult?: RegExpMatchArray | string[] | null;
+
+  /**
+   * HTML content (if `captureHtml` is true).
+   */
+  html: string;
+
+  /**
+   * XHTML content (if `captureHtml` is true).
+   */
+  xhtml: string;
+
+  /**
+   * Markdown content (if `captureHtml` is true).
+   */
+  markdown: string;
+
+  /**
+   * RTF content (if `captureRtf` is true).
+   */
+  rtf: string;
+
+  /**
+   * Data of various kinds, that PopClip detected in the selected text.
+   */
+  data: {
+    /**
+     * HTTP or HTTPS urls.
+     */
+    urls: RangedStrings;
+    /**
+     * Other protocols or app urls e.g. `ftp:`, `omnifocus:`, `craftdocs:` etc. (PopClip has a pre-defined allowlist
+     * for custom URL schemes.)
+     */
+    nonHttpUrls: RangedStrings;
+    /**
+     * Email addresses.
+     */
+    emails: RangedStrings;
+    /**
+     * Local file paths.
+     * */
+    paths: RangedStrings;
+  };
+
+  /**
+   * Unprocessed selection contents indexed by UTI.
+   */
+  content: PasteboardContent;
+
+  /**
+  Indicate if the text content is *just* a web URL (or URL-like string
+  such as `popclip.app`), allowing for leading and trailing whitespace.
+  */
+  isUrl: boolean;
+}
+
+/**
+ * Represents a generic range, as a location and length
+ */
+interface Range {
+  location: number;
+  length: number;
+}
+
+/**
+ * An array of strings with an additional `ranges` property defining the source of the data in the original string.
+ */
+interface RangedStrings extends Array<string> {
+  ranges: Range[];
+}
+
+/**
+ * Represents the state of the four modifier keys. The value is true when the key is held down
+ * at the time the action is invoked.
+ * See {@link PopClip.modifiers}.
+ */
+interface Modifiers {
+  /** Shift (⇧) key state. */
+  shift: boolean;
+  /** Control (⌃) key state. */
+  control: boolean;
+  /** Option (⌥) key state. */
+  option: boolean;
+  /** Command (⌘) key state. */
+  command: boolean;
+}
+
+/**
+ *  Properties relating the context surrounding the selected text.
+ */
+interface Context {
+  /**
+   * Indicates whether the text area supports formatting.
+   */
+  hasFormatting: boolean;
+
+  /**
+   * This property is true iff the Paste command is enabled in the current app.
+   */
+  canPaste: boolean;
+
+  /**
+   * This property is true iff text was selected.
+   */
+  canCopy: boolean;
+
+  /**
+   * This property is true iff text was selected and the app's Cut command is enabled.
+   */
+  canCut: boolean;
+
+  /**
+   * If the current app is a compatible browser, this will be the page URL.
+   */
+  browserUrl: string;
+
+  /**
+   * If the current app is a compatible browser, this will be the page title.
+   */
+  browserTitle: string;
+
+  /**
+   * The name of the current app, for example `Drafts`.
+   */
+  appName: string;
+
+  /**
+   * The bundle identifier of the current app, for example `com.agiletortoise.Drafts-OSX`.
+   */
+  appIdentifier: string;
+}
+
+/**
+ * Represents the current values of the extension's settings.
+ */
+interface Options {
+  readonly [identifier: string]: string | boolean;
+}
+
+/**
+ * The `authsecret` property has the special behaviour of throwing an `Error` with the message 'Not signed in' if it is accessed while either
+ * undefined or holding an empty string.
+ */
+interface AuthOptions {
+  /**
+   * The stored value that was returned from the `auth()` function.
+   */
+  authsecret: string;
+}
+
+/**
+ * The value an AppleScript returns: a string, number or boolean, an array for a list result
+ * (possibly nested), or undefined when the script returns no value. Results of any other type
+ * (such as records or object specifiers) come through in their string form, or undefined when
+ * they have none.
+ */
+type AppleScriptResult =
+  | string
+  | number
+  | boolean
+  | undefined
+  | AppleScriptResult[];
+
+/**
+ * Options for {@link PopClip.runAppleScript} and {@link PopClip.runAppleScriptFile}.
+ */
+interface AppleScriptOptions {
+  /**
+   * Name of a handler (subroutine) in the script to call. Without it, the script runs from
+   * top to bottom.
+   */
+  handler?: string;
+  /**
+   * Arguments for the handler, in order — strings and booleans only. Requires `handler`.
+   * Passing values as handler parameters is preferable to interpolating them into the script
+   * source, which invites escaping bugs.
+   */
+  parameters?: (string | boolean)[];
+  /**
+   * System permissions the script needs, resolved right before it runs. PopClip shows the
+   * system consent prompt for any the user has not yet decided; if access is denied, the
+   * call rejects and PopClip directs the user to the relevant System Settings pane. The only
+   * recognised value is currently `reminders`.
+   */
+  permissions?: "reminders"[];
+}
+
+/**
+ * The global `util` object acts as a container for various utility functions and constants. It implements  {@link Util}.
+ */
+declare const util: Util;
+
+/**
+ * A container for various utility functions and constants, available as the global {@link util} object.
  */
 interface Util {
   /**
@@ -1438,7 +817,7 @@ interface Util {
    * This will work for strings which match the name of a built-in action.
    *
    * @param string The string to localize.
-   * @return The localized string, or the original string if no localized version was avaiable.
+   * @returns The localized string, or the original string if no localized version was available.
    * @deprecated This is only used by the Paste and Enter and Paste and Match Style extensions
    * to localise their displayed action titles and is not recommended for general use.
    */
@@ -1512,29 +891,60 @@ interface Util {
   ): string[];
 
   /**
-     Get information about the current locale as configures in macOS settings.
-  */
+   * Information about the user's locale, as configured in macOS settings.
+   * Values are read afresh on each access. A value the locale does not
+   * define is the empty string.
+   */
   localeInfo: {
+    /** Locale identifier, e.g. `"en_GB"`. */
     localeIdentifier: string;
+    /** ISO 3166 region code, e.g. `"GB"`. */
     regionCode: string;
+    /** ISO 639 language code, e.g. `"en"`. */
     languageCode: string;
+    /** Decimal separator for numbers, e.g. `"."`. */
     decimalSeparator: string;
+    /** Thousands separator for numbers, e.g. `","`. */
     groupingSeparator: string;
+    /** ISO 4217 currency code, e.g. `"GBP"`. */
     currencyCode: string;
+    /** Currency symbol, e.g. `"£"`. */
     currencySymbol: string;
   };
 
   /**
-   * Get information about the current time zone as configured in macOS settings.
+   * Information about the current time zone, as configured in macOS settings.
+   * Values are read afresh on each access.
    */
   timeZoneInfo: {
+    /** Zone identifier from the IANA database, e.g. `"Europe/London"`. */
     identifier: string;
+    /** Abbreviation for the zone in its current state, e.g. `"GMT"` or `"BST"`. */
     abbreviation: string;
+    /** Current offset from GMT in seconds, including any daylight saving offset. */
     secondsOffset: number;
+    /** Whether daylight saving time is currently in effect. */
     daylightSaving: boolean;
   };
 
-  htmlToRtf(html: string): string | undefined;
+  /**
+   * Converts an HTML string to Markdown, using
+   * [Turndown](https://github.com/mixmark-io/turndown).
+   *
+   * @param html The HTML to convert.
+   * @param options Turndown options. Defaults to `{ headingStyle: "atx" }`.
+   */
+  htmlToMarkdown(html: string, options?: object): string;
+
+  /**
+   * Sanitizes an HTML string, removing scripts, styles and other unsafe
+   * markup, using
+   * [sanitize-html](https://github.com/apostrophecms/sanitize-html).
+   *
+   * @param html The HTML to sanitize.
+   * @param options Reserved; the current implementation ignores it.
+   */
+  cleanHtml(html: string, options?: object): string;
 
   /**
    * Encode a string as UTF-8 then Base-64 encode the result.
@@ -1567,10 +977,10 @@ interface Util {
    */
   base64Decode(string: string): string;
 
-  /* Build a query from params object */
+  /** Builds a URL query string from an object of parameters. */
   buildQuery: (params: { [key: string]: string }) => string;
 
-  /* Parse a query into params object */
+  /** Parses a URL query string into an object of parameters. */
   parseQuery: (query: string) => any;
 
   /** Decipher a JSON object that has been lightly obscured to prevent constants such as
@@ -1579,12 +989,18 @@ interface Util {
    * This function will ROT13 decipher the text, apply Base64 decoding, and parse the result as JSON. */
   clarify(obscuredString: string): any;
 
-  // same as global sleep()
+  /**
+   * Identical to the global {@link sleep}, which is the recommended form.
+   * Declared so that existing code calling `util.sleep()` still compiles.
+   *
+   * @param durationMilliseconds How long to sleep in milliseconds.
+   * @hidden
+   */
   sleep(durationMilliseconds: number): Promise<void>;
 
   /**
    * Fill the provided `TypedArray` with cryptographically secure random values.
-   * This aims work like `crypto.getRandomValues()` from Web Crypto API.
+   * This aims to work like `crypto.getRandomValues()` from Web Crypto API.
    * Internally, it is implemented using Apple's `SecRandomCopyBytes`.
    *
    * @example
@@ -1698,6 +1114,40 @@ interface Util {
 }
 
 /**
+ * The global `pasteboard` object provides access to the contents of the macOS general pasteboard (i.e. the system clipboard). It implements  {@link Pasteboard}.
+ */
+declare const pasteboard: Pasteboard;
+
+/**
+ * A simplified interface to the macOS pasteboard. Implemented by the global object,  {@link pasteboard}.
+ */
+interface Pasteboard {
+  /**
+   * Get and set the plain text content of the pasteboard.
+   *
+   * This property corresponds with the pasteboard type `public.utf8-plain-text`.
+   *
+   * When placing text on the pasteboard this way, PopClip's "Copied" notification will not appear.
+   * (Typically, scripts should use  {@link PopClip.copyText} instead, so that the user gets the "Copied" notification.)
+   *
+   * The value of this property will always be a string. If there is no plain text value on the
+   * pasteboard, reading this property will give an empty string (`""`).
+   *
+   * @example
+   * ```js
+   * let x = pasteboard.text;
+   * pasteboard.text = "new text";
+   * ```
+   */
+  text: string;
+
+  /**
+   * Get and set the content of the pasteboard, of the specified types
+   */
+  content: PasteboardContent;
+}
+
+/**
  * Represents the raw pasteboard content, indexed by UTI. Supports string data only.
  */
 interface PasteboardContent {
@@ -1737,75 +1187,6 @@ interface CopyOptions {
 }
 
 /**
- * A simplified interface to the macOS pasteboard. Implemented by the global object,  {@link pasteboard}.
- */
-interface Pasteboard {
-  /**
-   * Get and set the plain text content of the pasteboard.
-   *
-   * This property corresponds with the pasteboard type `public.utf8-plain-text`.
-   *
-   * When placing text on the pasteboard this way, PopClip's "Copied" notification will not appear.
-   * (Typically, scripts should use  {@link PopClip.copyText} instead, so that the user gets the "Copied" notification.)
-   *
-   * The value of this property will always be a string. If there is no plain text value on the
-   * pasteboard, reading this property will give an empty string (`""`).
-   *
-   * @example
-   * ```js
-   * let x = pasteboard.text;
-   * pasteboard.text = "new text";
-   * ```
-   */
-  text: string;
-
-  /**
-   * Get and set the content of the pasteboard, of the specified types
-   */
-  content: PasteboardContent;
-}
-
-/**
- * The global `popclip` object encapsulates the user's current interaction with PopClip, and provides methods
- * for performing various actions. It implements  {@link PopClip}.
- */
-declare const popclip: PopClip;
-
-/**
- * The `UrlObject` type is used for passing URL parameters into some methods. It can be either an object with a `url` property,
- * or an object with an `href` property.
- *
- * - If the object has a `url` property, the value of that property is used as the URL.
- * - If the object has an `href` property, the that string is first processed to replace all `+` with `%20` and then used as the URL.
- * - If the object has both `url` and `href` properties, the `url` property is used.
- *
- * The rationale for this is that [URL](https://developer.mozilla.org/en-US/docs/Web/API/URL) objects in JavaScript provide
- * the `href` property, with spaces encoded as `+`. Most modern APIs expect spaces to be encoded as `%20`, so this behaviour
- * allows URL objects to be passed in to methods that want a url, without needing to manually re-encode spaces.
- *
- * @example
- * ```js
- * const exampleUrl=new URL("https://example.com/path");
- * exampleUrl.searchParams.set("q","query with spaces");
- * print(exampleUrl.href)); // this will print "https://example.com/path?q=query+with+spaces"
- * popclip.openUrl(exampleUrl); // this will open "https://example.com/path?q=query%20with%20spaces"
- * ```
- */
-declare type UrlObject =
-  | {
-      /**
-       * String to be used as-is.
-       */
-      url: string;
-    }
-  | {
-      /**
-       * String in which PopClip will replace `+` characters with `%20` before use.
-       */
-      href: string;
-    };
-
-/**
  * Represents a formatted text string. The underlying implementation uses a macOS Attributed String (`NSAttributedString`) object.
  * Can be constructed from a plain string in RTF, HTML, or Markdown format.
  *
@@ -1843,15 +1224,6 @@ declare class RichString {
   readonly html: string;
 }
 
-/**
- * The global `util` object acts as a container for various utility functions and constants. It implements  {@link Util}.
- */
-declare const util: Util;
-
-/**
- * The global `pasteboard` object provides access to the contents of the macOS general pasteboard (i.e. the system clipboard). It implements  {@link Pasteboard}.
- */
-declare const pasteboard: Pasteboard;
 
 /**
  * Output a string for debugging purposes. By default it is not output anywhere,  but
@@ -1880,17 +1252,1546 @@ declare function print(...args: any[]): void;
  */
 declare function sleep(durationMilliseconds: number): Promise<void>;
 
+/* ==========================================================================
+   Module-based extensions
+   ==========================================================================
+
+   The types for writing an extension as a JavaScript or TypeScript module:
+   `defineExtension()`, the `Extension` and `Action` objects it takes, the
+   functions they may carry, the options array and `InferOptions`, and the
+   module mechanism itself (`require`, `module`, `exports`).
+   ========================================================================== */
+
 /**
- * This global function may be called as an alternative to setting `module.exports` directly.
- * The advantage of using `defineExtension()` is that you will automatically get type checking
- * and autocomplete for your extension object.
+ * Exports the extension object from a module-based extension. This is a module's
+ * entry point: PopClip loads the module, and the object given here defines the
+ * extension's actions, options and behaviour.
  *
- * You may define the shape of the extensions's options object by specifying the
- * `CustomOptions` generic type parameter. This will enable type checking and autocomplete for
- * the `options` parameter in action functions and the population function.
+ * At runtime this is simply `module.exports = extension`, and the difference is
+ * entirely one of types. Because the parameter is typed, every property of the
+ * object literal written inside the call is checked and autocompleted in place,
+ * with no type annotations anywhere. Assigning to `module.exports` carries no
+ * type information, so nothing in the object is checked unless you first declare
+ * a separate variable annotated as {@link Extension} — restating a type that is
+ * already known here. For that reason this is the recommended way to write a
+ * module extension.
+ *
+ * Note that a module's actions are invoked through their `code` function. The
+ * action flags — `title`, `icon`, `requirements`, `regex`, `before`, `after` and
+ * so on — work as they do in a static config, but the action-type properties
+ * such as `url`, `keyCombo` and `shellScript` are static config only, and are
+ * ignored here.
+ *
+ * @example
+ * ```js
+ * // the options array is declared first so its type can be inferred
+ * const options = [
+ *   { identifier: "prefix", type: "string", defaultValue: ">" },
+ * ] as const;
+ *
+ * defineExtension<InferOptions<typeof options>>({
+ *   options,
+ *   action: (input, options) => {
+ *     popclip.pasteText(options.prefix + input.text);
+ *   },
+ * });
+ * ```
+ *
+ * Specifying the `CustomOptions` generic type parameter, as above, extends the
+ * checking to the `options` parameter of action functions and the population
+ * function, so `options.prefix` is known to exist and to be a string.
+ * {@link InferOptions} derives that type from the options array itself, which
+ * again avoids restating it.
  *
  * @param extension The extension object to export.
  */
 declare function defineExtension<CustomOptions = Options>(
   extension: Extension<CustomOptions>,
 ): void;
+
+/**
+ * The Extension object defines the PopClip extension.
+ */
+interface Extension<CustomOptions = Options> extends ActionProperties {
+  /**
+   * Defines the user-configurable options for this extension.
+   */
+  options?: readonly Option[];
+
+  /**
+   * If you define this function then PopClip will display a 'sign in' button in the options UI. When the user clicks the button,
+   * PopClip will call this function with an `info` object and a `flow` callback.
+   *
+   * If the sign in needs a username and password, you'll also need to define `username` and `password` options. PopClip will then pass the values
+   * of those options in the info parameter. */
+  auth?: AuthFunction;
+
+  /**
+   * Define the actions to go in PopClip's popup. This can be an array or a function.
+   *
+   * - If it's an array, the supplied actions are used in the popup, subject to meeting the
+   *   requirements and regex conditions.
+   *
+   * - If it's a population function, it is called by PopClip to dynamically populate the popup with actions from this extension.
+   *   Setting requirements and regex keys has no effect on dynamic actions — the function itself is responsible for deciding what actions to show.
+   *   Population function requires the `dynamic` entitlement.
+   */
+  actions?:
+    | (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
+    | PopulationFunction<CustomOptions>;
+
+  /**
+   * Simplified property to define a single action.
+   */
+  action?: Action<CustomOptions> | ActionFunction<CustomOptions>;
+
+  /**
+   * Makes the whole extension a single button that opens a submenu of child actions, as an
+   * alternative to `actions`/`action`. Same shape as {@link Action.submenu}: a static array
+   * of actions, or a population function (requires the `dynamic` entitlement).
+   */
+  submenu?:
+    | (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
+    | PopulationFunction<CustomOptions>;
+
+  /**
+   * Exported test function for use during development.
+   */
+  test?: TestFunction;
+
+  // Static-only properties: these can be set only in the extension's static
+  // config, and cannot be overridden by a module.
+
+  /**
+   * Display name of the extension. In the static config this is the only
+   * property that is always required. It cannot be set from a module, which
+   * is why it is optional in this interface.
+   * @hidden
+   */
+  name?: LocalizableString;
+
+  /**
+   * Unique identifier, e.g. `"com.example.myextension"`. Allowed characters are
+   * `A-Z`, `a-z`, `0-9`, `.` and `-`. The prefix `com.pilotmoon.` is reserved.
+   * If omitted, the package directory name or {@link name} is used. Static
+   * config only.
+   * @hidden
+   */
+  identifier?: string;
+
+  /**
+   * Capabilities the extension's JavaScript needs.
+   * @hidden
+   */
+  entitlements?: Entitlement[];
+
+  /**
+   * Minimum PopClip version required, as an integer build number, e.g. `6134`.
+   * @hidden
+   */
+  popclipVersion?: number;
+
+  /**
+   * Minimum macOS version required, e.g. `"12.0"`. Quote it in YAML.
+   * @hidden
+   */
+  macosVersion?: string;
+
+  /**
+   * Default presentation of the extension's actions in the bar.
+   * @hidden
+   */
+  showAs?: "icon" | "text";
+
+  /** @hidden */
+  color?: string;
+
+  /**
+   * Label for the service the user signs in to, used in prompts such as
+   * "Sign in to your [label] account". Defaults to {@link name}.
+   * @hidden
+   */
+  authServiceLabel?: LocalizableString;
+
+  /**
+   * Overrides PopClip's automatic decision about allowing multiple instances.
+   * @hidden
+   */
+  offersMultipleInstances?: boolean;
+
+  /**
+   * Why this extension needs a shell script action. Required for directory submission.
+   * @hidden
+   */
+  shellScriptRationale?: string;
+
+  /**
+   * Short description of the extension. Shown in the extensions directory.
+   * @hidden
+   */
+  description?: LocalizableString;
+
+  /**
+   * Space-separated words to help people find the extension in the directory.
+   * @hidden
+   */
+  keywords?: string;
+
+  /**
+   * For snippets using the inverted syntax: how to interpret the snippet body.
+   * With {@link module} set, the body is loaded as a module.
+   * @hidden
+   */
+  language?: "javascript" | "typescript" | "applescript";
+
+  /**
+   * Path to a JavaScript or TypeScript module to load. In an inverted-syntax
+   * snippet, set it to `true` to load the snippet body itself as the module.
+   * @hidden
+   */
+  module?: string | boolean;
+}
+
+/**
+ * **Action** represents the properties of a single action.
+ * An action with no `code` function displays a disabled title/icon only
+ * (unless it is a {@link separator} or has a {@link submenu}).
+ */
+interface Action<CustomOptions = Options> extends ActionProperties {
+  readonly code?: ActionFunction<CustomOptions>;
+
+  /**
+   * If `true`, this entry is a separator, rather than an action. It causes a section break
+   * between buttons in a submenu. It has no effect outside submenus. Use it on its own; other properties are ignored.
+   *
+   * @example
+   * ```js
+   * actions: [
+   *   { title: ..., icon: ... },
+   *   { separator: true },
+   *   { title: ..., icon: ... },
+   * ]
+   * ```
+   */
+  readonly separator?: boolean;
+
+  /**
+   * If set, clicking this action opens a submenu containing these child actions.
+   *
+   * - If it's an array, the supplied actions are used in the submenu.
+   * - If it's a population function, it is called when the submenu opens to generate its
+   *   actions dynamically. A submenu function requires the `dynamic` entitlement.
+   *
+   * The action's own title and icon label the submenu. If the action also defines `code`,
+   * it stays directly clickable in addition to offering the submenu.
+   */
+  readonly submenu?:
+    | (Action<CustomOptions> | ActionFunction<CustomOptions>)[]
+    | PopulationFunction<CustomOptions>;
+
+  /**
+   * The action asks to be the popup's primary button — the one that is centred above
+   * the pointer when the popup appears. Used by the built-in Copy and Paste actions.
+   * If more than one visible button wants primary display, the leftmost button wins.
+   */
+  readonly wantsPrimaryDisplay?: boolean;
+
+  /**
+   * A submenu asks to be already open when the popup appears, instead of waiting to be
+   * clicked. PopClip opens it directly, with a back button to reach the rest of the popup.
+   * This is used by the built-in Spelling action.
+   *
+   * If more than one submenu asks for initial display, the first one found wins (left-to-right
+   * search including subfolders). It has no effect on an action that is not a submenu.
+   */
+  readonly wantsInitialDisplay?: boolean;
+}
+
+/**
+ * An action function is called when the user clicks the action button in PopClip. This is where
+ * the extension does its main work.
+ * @param input The selected text and related properties. (Same object as  {@link PopClip.input}.)
+ * @param options Current values of the options for this extension. (Same object as  {@link PopClip.options}.)
+ * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
+ */
+type ActionFunction<CustomOptions = Options> = (
+  input: Input,
+  options: CustomOptions & AuthOptions,
+  context: Context,
+) => Promise<string | void> | string | void;
+
+/**
+ * A population function dynamically generates the actions for the extension. See  {@link Extension.actions}.
+ * @param input The selected text and related properties. (Same object as  {@link PopClip.input}.)
+ * @param options Current values of the options for this extension. (Same object as  {@link PopClip.options}.)
+ * @param context Information about the context surrounding the selection. (Same object as  {@link PopClip.context}.)
+ * @returns A single action or action function, an array of them, or nothing.
+ */
+type PopulationFunction<CustomOptions = Options> = (
+  input: Input,
+  options: CustomOptions,
+  context: Context,
+) => (Action | ActionFunction)[] | Action | ActionFunction | void;
+
+/**
+ * A function that can be used to verify the extension's functionality.
+ * The test function should throw an error if the test fails, and exit normally if it succeeds.
+ * PopClip doesn't currently call the test function but you can use it to test your extension
+ * during development.
+ */
+type TestFunction = () => Promise<void> | void;
+
+/**
+ * Function signature of the  {@link Extension.auth} method.
+ */
+type AuthFunction = (
+  info: AuthInfo,
+  flow: AuthFlowFunction,
+) => Promise<string | AuthResult>;
+
+/**
+ * The callback passed to the {@link Extension.auth} function as its second
+ * parameter, for kicking off an authorization flow.
+ */
+type AuthFlowFunction = (
+  url: string,
+  params?: { [key: string]: string | undefined },
+  expect?: string[],
+) => Promise<any>;
+
+/**
+ * Credentials used in auth function
+ * */
+interface AuthInfo {
+  /** Value of `username` option (will be empty string if none defined) */
+  username: string;
+  /** Value of `password` option (will be empty string if none defined) */
+  password: string;
+  /** An appropriate value to use as the redirection URL in authorization flows for this extension.
+   * Example output:
+   * `http://localhost:58906/callback/com.pilotmoon.popclip.extension.todoist/auth`
+   */
+  redirect: string;
+  /** Extension display name */
+  name: string;
+  /** Extension identifier */
+  identifier: string;
+}
+
+/**
+ * Object form of the value returned by {@link Extension.auth}, for when the extension has
+ * more than just the secret to hand back. Returning a bare string is equivalent to
+ * returning `{ secret: theString }`.
+ */
+interface AuthResult {
+  /** The secret to store (e.g. an access token). Saved as the extension's `authsecret`. */
+  secret: string;
+  /** Optional account identifier to display, e.g. an email or username ("Signed in as …"). */
+  label?: string;
+  /** Optional token lifetime in seconds, as reported by the auth server (its `expires_in`).
+   * PopClip records it with the sign-in time; once it elapses the app treats the extension
+   * as signed out and prompts the user to sign in again. */
+  expiresIn?: number;
+}
+
+/**
+ * The possible values for `type` of {@link Option}.
+ */
+type OptionType =
+  | "string"
+  | "boolean"
+  | "multiple"
+  | "password"
+  | "heading"
+  | "secret";
+
+/**
+ * Defines a single extension option.
+ */
+interface OptionBase {
+  /**
+   * An identifying string for this option.
+   */
+  readonly identifier: string;
+
+  /**
+   * The kind of option, one of:
+   *  * `string`: a text box for free text entry,
+   *  * `boolean`: a check box,
+   *  * `multiple`: multiple-choice drop-down with predefined options,
+   *  * `secret`: concealed text entry field (persisted in user's keychain),
+   *  * `password`: concealed text entry field (not persisted, only passed to auth function),
+   *  * `heading`: adds a heading in the user interface, but does not actually define an option
+   */
+  readonly type: OptionType;
+
+  /**
+   * A short label for this option.
+   */
+  readonly label?: LocalizableString;
+
+  /**
+   * An optional longer explanation of this option, to be shown in the UI.
+   */
+  readonly description?: LocalizableString;
+
+  /**
+   * If true, this option will be hidden in the prefs window. Default is false.
+   */
+  readonly hidden?: boolean;
+
+  /**
+   * If true, this option will be inset to the right of its label, instead of below it. Default is false.
+   */
+  readonly inset?: boolean;
+}
+
+/**
+ A string-valued option.
+
+*/
+interface StringOption extends OptionBase {
+  readonly type: "string";
+  /**
+   * The default value of the option. If omitted, `string` options default to the empty string.
+   */
+  readonly defaultValue?: string;
+
+  /**
+   * If true, show a multi-line text field instead of a single-line one.
+   * Useful for longer inputs such as prompts. Default is false.
+   */
+  readonly multiline?: boolean;
+}
+
+/**
+ * A multiple-choice option.
+ */
+interface MultipleOption extends OptionBase {
+  readonly type: "multiple";
+  /**
+   * The default value of the option. If omitted, `multiple` options default to None if `allowNone`
+   * is set, or else the first item in the list.
+   */
+  readonly defaultValue?: string;
+
+  /**
+   * The possible values for a `multiple` option.
+   */
+  readonly values?: readonly string[];
+
+  /**
+   * Display names corresponding to the entries in the {@link values} array. These are shown in the option UI.
+   * If omitted, the raw value strings are shown instead.
+   */
+  readonly valueLabels?: readonly LocalizableString[];
+
+  /**
+   * If true, the UI offers an "Other…" row in addition to the defined {@link values},
+   * allowing the user to type a value of their own.
+   */
+  readonly allowOther?: boolean;
+
+  /**
+   * If true, the option UI offers a "None" row in addition to the defined {@link values}, whose value is the
+   * empty string. An option with `allowNone` and no {@link defaultValue} defaults to None
+   * rather than to the first value.
+   */
+  readonly allowNone?: boolean;
+}
+
+/**
+ * A boolean option.
+ */
+interface BooleanOption extends OptionBase {
+  readonly type: "boolean";
+  /**
+   * The default value of the option. If omitted, `boolean` options default to true.
+   */
+  readonly defaultValue?: boolean;
+  /**
+   * An icon for this option. It is only displayed for boolean options, next to the check box.
+   */
+  readonly icon?: string;
+}
+
+/**
+ * A concealed string option.
+ */
+interface PasswordOption extends OptionBase {
+  readonly type: "password" | "secret";
+}
+
+/**
+ * A heading option, which does not define an actual option, but adds a heading in the preferences window.
+ */
+interface HeadingOption extends OptionBase {
+  readonly type: "heading";
+}
+
+/**
+ Represents a single option in the extension's preferences.
+*/
+type Option =
+  | StringOption
+  | MultipleOption
+  | BooleanOption
+  | PasswordOption
+  | HeadingOption;
+
+/**
+ * The type of the `options` object, derived from an options array. Pass it as
+ * the type parameter of {@link defineExtension} so that action functions and
+ * the population function see the real option identifiers and value types,
+ * instead of the generic {@link Options}.
+ *
+ * The array must be declared `as const`, so that the identifiers and types are
+ * literal. `heading` and `password` options carry no value and are omitted.
+ *
+ * @example
+ * ```js
+ * const options = [
+ *   { identifier: "prefix", type: "string", defaultValue: ">" },
+ *   { identifier: "loud", type: "boolean", defaultValue: false },
+ * ] as const;
+ *
+ * // { readonly prefix: string; readonly loud: boolean }
+ * type MyOptions = InferOptions<typeof options>;
+ *
+ * defineExtension<MyOptions>({ options, action: (input, options) => { ... } });
+ * ```
+ */
+type InferOptions<T extends readonly Option[]> = {
+  readonly [K in T[number]["identifier"] as Extract<
+    T[number],
+    { identifier: K }
+  > extends { type: "string" | "secret" | "multiple" | "boolean" }
+    ? K
+    : never]: Extract<T[number], { identifier: K }> extends { type: "boolean" }
+    ? boolean
+    : string;
+};
+
+/**
+ * Loads a module or data file. The argument is resolved as follows:
+ *
+ * - starting with `./` or `../`: a path relative to the current file;
+ * - otherwise: a path relative to the root of the package directory;
+ * - failing that: the name of one of the libraries bundled with PopClip.
+ *
+ * Loads `.js` (CommonJS), `.ts` (ES module syntax, transpiled) and `.json`
+ * files. Results are cached, so requiring the same argument twice returns the
+ * same instance. Returns `undefined` if nothing is found. Paths beginning with
+ * `/`, or using `..` to escape the package directory, are not valid.
+ *
+ * TypeScript files may use `import` syntax instead; it is transpiled to
+ * `require()` calls.
+ *
+ * @param id Module name, or path to a file in the package.
+ */
+declare function require(id: BundledModule): any;
+declare function require(id: string): any;
+
+/**
+ * The names of the libraries bundled with PopClip, which `require()` (or
+ * `import`) can load without the extension shipping them. The bundled
+ * versions are listed in the documentation:
+ * https://www.popclip.app/dev/js-environment#bundled-libraries
+ *
+ * To type check code that uses one, install the same version as a dev
+ * dependency of the extension project; the library's own types are used.
+ */
+type BundledModule =
+  | "axios"
+  | "buffer"
+  | "case-anything"
+  | "content-type"
+  | "dom-serializer"
+  | "emoji-regex"
+  | "entities"
+  | "fast-json-stable-stringify"
+  | "fast-plist"
+  | "htmlparser2"
+  | "js-yaml"
+  | "linkedom"
+  | "linkifyjs"
+  | "oauth-1.0a"
+  | "rot13-cipher"
+  | "sanitize-html"
+  | "sucrase"
+  | "turndown"
+  | "valibot";
+
+/**
+ * The CommonJS module object. Assigning to `module.exports` exports the
+ * extension object, though {@link defineExtension} is preferred because it
+ * type checks what you pass it.
+ */
+declare const module: { exports: any };
+
+/**
+ * Shorthand for `module.exports`. Individual properties may be assigned, as in
+ * `exports.actions = [...]`.
+ */
+declare const exports: any;
+
+/**
+ * Exports an arbitrary object for use by another file, which imports it with
+ * {@link require}. Partially implements the
+ * [AMD spec](https://github.com/amdjs/amdjs-api/wiki/AMD).
+ *
+ * Call it at most once per file; if called more than once, only the final call
+ * has any effect. `defineExtension` is this same function, with a typed
+ * parameter.
+ *
+ * A factory function is called with the resolved dependencies as arguments.
+ * With no dependency list, it receives `require`, `exports` and `module`, per
+ * the spec. A truthy return value becomes the exported value; a factory may
+ * instead return nothing and assign to `exports` itself. A module id, if
+ * given, is ignored.
+ *
+ * Declared so that existing code using it still compiles. Prefer
+ * {@link defineExtension}, or `module.exports = ...`.
+ *
+ * @hidden
+ */
+declare const define: {
+  (factory: (...dependencies: any[]) => unknown): void;
+  (dependencies: string[], factory: (...dependencies: any[]) => unknown): void;
+  (id: string, factory: (...dependencies: any[]) => unknown): void;
+  (
+    id: string,
+    dependencies: string[],
+    factory: (...dependencies: any[]) => unknown,
+  ): void;
+  (object: object): void;
+  /** Present, as the AMD spec requires, to signal AMD support. */
+  amd: object;
+};
+
+/* ==========================================================================
+   Static config
+   ==========================================================================
+
+   The extension config format, as written in a snippet or a package's Config
+   file (YAML, JSON or plist). It is in this file because `Extension` and
+   `Action` extend `ActionProperties`, which is what lets `defineExtension()`
+   type check a whole extension object, and because module actions share the
+   action flags (title, icon, requirements, regex, before, after and so on).
+
+   The action-type properties -- url, keyCombo, shellScript and the rest --
+   are different: PopClip reads them from static config only. A module action
+   runs its `code` function instead, and setting them on one has no effect.
+
+   Property names here are camelCase. In YAML, JSON and plist config the same
+   key may be written either way: `captureHtml` or `capture html`. The prose
+   documentation uses the spaced form. https://www.popclip.app/dev/config
+
+   The action-type keys in this section are excluded from the generated API
+   reference; the shared action flags and their value types are included.
+   ========================================================================== */
+
+/**
+ * Properties common to Action and Extension
+ */
+interface ActionProperties extends IconProperties {
+  /**
+   * A unique identifying string. An identifier for an action can be any string of your choosing.
+   */
+  identifier?: string;
+
+  /**
+   * The action's title.
+   *
+   * If no title is defined here, the extension's `name` will be used, if any.
+   */
+  title?: LocalizableString;
+
+  /**
+   * A string to define the action's icon.
+   *
+   * If no icon is defined here, the extension's {@link Extension.icon | icon} will be used, if any.
+   * Setting to `null` explicitly sets the action to have no icon.
+   */
+  icon?: string | null;
+
+  /**
+   * An array of conditions which must be met for this action to appear — see  {@link Requirement}.
+   *
+   * * If no array is specified here, the action takes the value of  {@link Extension.requirements}.
+   * * If no array is specified there either, the action takes the default value `["text"]`.
+   *
+   * When multiple conditions are specified, all of them must be satisfied.
+   *
+   * An empty array (`[]`) indicates no requirements at all, meaning the action will always appear.
+   *
+   * This property has no effect on dynamically generated actions.
+   */
+  requirements?: Array<Requirement | NegatedRequirement>;
+
+  /**
+   * Array of bundle identifiers for which the extension should appear. The action will only
+   * appear if PopClip is used in one of the specified apps.
+   *
+   * This property has no effect on dynamically generated actions.
+   */
+  requiredApps?: string[];
+
+  /**
+   * Array of bundle identifiers for which the extension should not appear. The action will not
+   * appear if PopClip is used in any of the specified apps.
+   *
+   * This property has no effect on dynamically generated actions.
+   */
+  excludedApps?: string[];
+
+  /**
+   * A regular expression to decide whether this action appears in the popup.
+   *
+   * * If no regex is specified here, the action takes the value of  {@link Extension.regex}.
+   * * If no regex is specified there either, the action will match any input.
+   *
+   * You may express the value either as a
+   * [JavaScript regular expression literal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions)
+   * (or otherwise constructed `RegExp` object), or as a string.
+   *
+   * * If you supply a `RegExp` it will be evaluated in the JavaScript engine.
+   * * If you supply a string it will be evaluated by macOS natively using the `NSRegularExpression` API (same as for 'classic' PopClip extensions).
+   *
+   * If the regex matches the selected text, the action will be shown in the popup and
+   * the first occurrence of the matched text is accessible later via {@link Input.matchedText | matchedText}.
+   *
+   * If there is no match, the action is excluded from the popup.
+   *
+   * The regex's `lastIndex` is reset before and after each invocation, so the `g` (global) and `y` (sticky) flags have no effect.
+   *
+   * This property has no effect on dynamically generated actions.
+   *
+   * @example
+   * ```js
+   * regex = /abc/i   // Example regex 'abc' with 'i' (case insensitive) flag
+   *                  // Matches abc, ABC, Abc, etc.
+   * ```
+   */
+  regex?: RegExp | string;
+
+  /**
+   * Declares the application or website associated with this action, if any.
+   */
+  app?: AssociatedApp;
+  apps?: AssociatedApp[];
+
+  /**
+   * An optional step to perform before the main action.
+   */
+  before?: BeforeStep;
+
+  /**
+   * An optional step to perform after the main action.
+   */
+  after?: AfterStep;
+
+  /**
+   * Whether PopClip will capture HTML and Markdown content for the selection. Default is no.
+   */
+  captureHtml?: boolean;
+
+  /**
+   * Whether PopClip will capture RTF (Rich Text Format) content for the selection. Default is no.
+   */
+  captureRtf?: boolean;
+
+  /**
+   * Whether PopClip's popup should stay on screen after clicking this action's button. Default is no.
+   */
+  stayVisible?: boolean;
+
+  /**
+   * Whether the pasteboard should be restored to its original state after `paste-result`.
+   */
+  restorePasteboard?: boolean;
+
+  // Action-type-specific properties: these say what the action actually does.
+  // Exactly one action type's properties should be set on any given action.
+  //
+  // These are read from static config only. A module's actions run their `code`
+  // function instead, so setting any of these on a module action has no effect.
+  // (The action flags -- title, icon, requirements, regex, before, after and so
+  // on -- do apply to module actions.)
+  //
+  // Documented in full at https://www.popclip.app/dev/actions
+
+  /**
+   * Name of a macOS Shortcut to run, exactly as it appears in the Shortcuts app.
+   * @hidden
+   */
+  shortcutName?: string;
+
+  /**
+   * Name of a macOS Service to invoke.
+   * @hidden
+   */
+  serviceName?: string;
+
+  /**
+   * URL to open. Use `***` or `{popclip text}` as the placeholder for the text.
+   * @hidden
+   */
+  url?: string;
+
+  /**
+   * With {@link url}: collapse whitespace in the inserted text before encoding it.
+   * @hidden
+   */
+  cleanQuery?: boolean;
+
+  /**
+   * With {@link url}: encode spaces in the inserted text as `+` rather than `%20`.
+   * @hidden
+   */
+  spacesAsPlus?: boolean;
+
+  /**
+   * Key combination to press, e.g. `"command shift ="`, or a virtual key code.
+   * @hidden
+   */
+  keyCombo?: string | number;
+
+  /**
+   * Key combinations to press in sequence. An entry may also be `"wait <milliseconds>"`.
+   * @hidden
+   */
+  keyCombos?: Array<string | number>;
+
+  /**
+   * Where to post the key events: the session event tap (the default), the
+   * target app's process, or the HID event tap.
+   * @hidden
+   */
+  keyComboTarget?: "session" | "app" | "hid";
+
+  /**
+   * AppleScript source to run. Supports `{popclip text}` and other placeholders.
+   * @hidden
+   */
+  applescript?: string;
+
+  /**
+   * Path to an `.applescript` or `.scpt` file in the package.
+   * @hidden
+   */
+  applescriptFile?: string;
+
+  /**
+   * Call a named handler in the script, rather than running it top to bottom.
+   * @hidden
+   */
+  applescriptCall?: {
+    handler: string;
+    /** Names of script variables to pass as parameters, e.g. `["text", "browser url"]`. */
+    parameters?: string[];
+  };
+
+  /**
+   * Shell script source, passed to {@link interpreter} on standard input.
+   * @hidden
+   */
+  shellScript?: string;
+
+  /**
+   * Path to a script file in the package.
+   * @hidden
+   */
+  shellScriptFile?: string;
+
+  /**
+   * Interpreter for {@link shellScript} or {@link shellScriptFile}. A bare name
+   * such as `"ruby"` is resolved against the user's shell `PATH`; an absolute
+   * path is used as given.
+   * @hidden
+   */
+  interpreter?: string;
+
+  /**
+   * With {@link shellScriptFile}: name of a script variable to pass on standard input.
+   * @hidden
+   */
+  stdin?: string;
+
+  /**
+   * JavaScript source to run. It is wrapped in an async function, so a top-level
+   * `return` of a string passes that string to the {@link after} step.
+   * @hidden
+   */
+  javascript?: string;
+
+  /**
+   * Path to a `.js` or `.ts` file in the package.
+   * @hidden
+   */
+  javascriptFile?: string;
+}
+
+/**
+ * Properties that define how an icon is interpreted.
+ */
+interface IconProperties {
+  /**
+   * If true, the supplied icon will be displayed with its original color instead of being filled in white/black. Default is false.
+   */
+  preserveColor?: boolean;
+  /**
+   * If true, the supplied icon will be displayed with its original aspect ratio instead of being scaled to fit a square. Default is false.
+   */
+  preserveAspect?: boolean;
+  /**
+   * If true, the supplied icon will be drawn horizontally flipped. Default is false.
+   */
+  flipX?: boolean;
+  /**
+   * If true, the supplied icon will be drawn vertically flipped. Default is false.
+   */
+  flipY?: boolean;
+
+  /**
+   * Move the icon horizontally by the specified distance, expressed as percentage of the icon's width.
+   */
+  moveX?: number;
+
+  /**
+   * Move the icon vertically by the specified distance, expressed as percentage of the icon's height.
+   */
+  moveY?: number;
+
+  /**
+   * Scale the icon by the specified factor, expressed as a percentage of the original size.
+   */
+  scale?: number;
+
+  /**
+   * Rotate the icon anticlockwise by the specified angle, expressed in degrees.
+   */
+  rotate?: number;
+
+  /**
+    Draw the icon inside a square.
+    */
+  square?: boolean;
+
+  /**
+   * Draw the icon inside a circle.
+   */
+  circle?: boolean;
+
+  /**
+   * Draw the icon inside a magnifying glass shape.
+   */
+  search?: boolean;
+
+  /**
+   * Draw a strike-through line over the icon.
+   */
+  strike?: boolean;
+
+  /**
+   * Draw the enclosing shape as a solid shape.
+   */
+  filled?: boolean;
+
+  /**
+   * For text icons only. Draw the text using a monospaced font.
+   */
+  monospaced?: boolean;
+}
+
+/**
+ * A requirement is specified in the {@link Action.requirements} array as a string.
+ *
+ * @example
+ * ```js
+ * ["paste", "!urls", "option-goFishing=1"]
+ * ```
+ */
+type Requirement =
+  /** One or more characters of text must be selected. */
+  | "text"
+  /** Synonym for `text`, retained for backward compatibility. */
+  | "copy"
+  /** Text must be selected and the app's Cut command must be available. */
+  | "cut"
+  /** The app's Paste command must be available. */
+  | "paste"
+  /** The selected text control must support formatting. */
+  | "formatting"
+  /** The text must *contain* exactly one web URL. Narrows the text to that URL. */
+  | "url"
+  /** The text must *be* a web URL, with nothing but whitespace around it. Narrows the text to that URL. */
+  | "isurl"
+  /** The text must contain one or more web URLs. */
+  | "urls"
+  /** The text must contain exactly one email address. Narrows the text to that address. */
+  | "email"
+  /** The text must contain one or more email addresses. */
+  | "emails"
+  /** The text must be a local file path that exists. Narrows and standardizes the path. */
+  | "path"
+  /** The option with the given identifier must equal the given string. Boolean options map to `1` and `0`. */
+  | `option-${string}=${string}`;
+
+/** Negated form of  {@link Requirement}. */
+type NegatedRequirement = `!${Requirement}`;
+
+/**
+ * Strings which can be used to specify the  {@link Action.before} action.
+ */
+type BeforeStep = "cut" | "copy" | "paste" | "paste-plain";
+
+/**
+ * Strings which can be used to specify the  {@link Action.after} action.
+ */
+type AfterStep =
+  | BeforeStep
+  /** Trigger PopClip to appear again with the current selection. */
+  | "popclip-appear"
+  /** Place the originally selected text on the clipboard. */
+  | "copy-selection"
+  /** Show a tick or an 'X', depending on whether the action succeeded. */
+  | "show-status"
+  /** Copy the result to the clipboard. */
+  | "copy-result"
+  /** Paste the result if the app's Paste command is available, else copy it. */
+  | "paste-result"
+  /** Copy the result and show it, truncated to 160 characters. */
+  | "show-result"
+  /** As `show-result`, but the preview can be clicked to paste. */
+  | "preview-result";
+
+/**
+ * Declares information about an app or website that this extension interacts with.
+ */
+interface AssociatedApp {
+  /**
+   * Name of the app. For example "Scrivener"
+   */
+  name: string;
+
+  /**
+   * Web page where user can obtain the app, e.g. "https://www.literatureandlatte.com/scrivener".
+   */
+  link: string;
+
+  /**
+   * Indicates whether PopClip should check for the presence of the app on the computer. Default is false.
+   */
+  checkInstalled?: boolean;
+
+  /**
+   * List of possible bundle identifiers of this app.
+   * Required if {@link checkInstalled} is true.
+   */
+  bundleIdentifiers?: string[];
+
+  /**
+   * A single bundle identifier, as an alternative to {@link bundleIdentifiers}.
+   */
+  bundleIdentifier?: string;
+}
+
+/**
+ * An object giving strings for the different languages PopClip supports. See  {@link LocalizableString}.
+ */
+interface StringTable {
+  /** English (US) language string. */
+  en: string;
+  /** English (UK) language string. */
+  "en-GB"?: string;
+  /** Danish language string. */
+  da?: string;
+  /** German language string. */
+  de?: string;
+  /** Spanish language string. */
+  es?: string;
+  /** French language string. */
+  fr?: string;
+  /** Italian language string. */
+  it?: string;
+  /** Japanese language string. */
+  ja?: string;
+  /** Korean language string. */
+  ko?: string;
+  /** Dutch language string. */
+  nl?: string;
+  /** Polish language string. */
+  pl?: string;
+  /** Brazilian Portuguese language string. */
+  "pt-BR"?: string;
+  /** Russian language string. */
+  ru?: string;
+  /** Slovak language string. */
+  sk?: string;
+  /** Turkish language string. */
+  tr?: string;
+  /** Vietnamese language string. */
+  vi?: string;
+  /** Simplified Chinese language string. */
+  "zh-Hans"?: string;
+  /** Traditional Chinese language string. */
+  "zh-Hant"?: string;
+  /** Any other strings. */
+  [code: string]: string | undefined;
+}
+
+/**
+ * A type to represent a localizable string.
+ *
+ * The value may be either a string or an object.
+ * If you supply a string, that string is used.
+ * If you supply a  {@link StringTable} object, PopClip will
+ * display the string for the user's preferred language if possible, with fallback to the `en` string.
+ *
+ * @example
+ * ```js
+ * option.label = "Color" // just use this string
+ * option.label = { en: "Color", "en-GB": "Colour", fr: "Couleur", "zh-Hans": "颜色" }
+ * ```
+ */
+type LocalizableString = string | StringTable;
+
+/**
+ * A capability the extension's JavaScript needs: `network` allows
+ * `XMLHttpRequest`; `dynamic` allows dynamically generated actions; `script`
+ * allows `popclip.runAppleScript()` and `popclip.runAppleScriptFile()`.
+ * @hidden
+ */
+type Entitlement = "network" | "dynamic" | "script";
+
+/* ==========================================================================
+   Environment
+   ==========================================================================
+
+   The globals PopClip's JavaScript environment provides beyond the language
+   itself. The engine is JavaScriptCore with core-js polyfills and a small set
+   of shims; it is not a browser and not Node. Only what is declared here
+   exists: there is no `fetch`, `document`, `localStorage` or `process`, and
+   `Blob` and `TextEncoder` are narrower than their Web API namesakes.
+   ========================================================================== */
+
+/**
+ * Node-compatible `Buffer`, a `Uint8Array` subclass for working with binary
+ * data. PopClip installs it as a global; the implementation is the `buffer`
+ * npm package (6.0.3), which is also loadable as `require("buffer")`.
+ *
+ * @example
+ * ```js
+ * const b = Buffer.from("hello", "utf8");
+ * print(b.toString("base64")); // aGVsbG8=
+ * ```
+ */
+declare class Buffer extends Uint8Array {
+  length: number
+  write(string: string, offset?: number, length?: number, encoding?: string): number;
+  toString(encoding?: string, start?: number, end?: number): string;
+  toJSON(): { type: 'Buffer', data: any[] };
+  equals(otherBuffer: Buffer): boolean;
+  compare(otherBuffer: Uint8Array, targetStart?: number, targetEnd?: number, sourceStart?: number, sourceEnd?: number): number;
+  copy(targetBuffer: Buffer, targetStart?: number, sourceStart?: number, sourceEnd?: number): number;
+  slice(start?: number, end?: number): Buffer;
+  writeUIntLE(value: number, offset: number, byteLength: number, noAssert?: boolean): number;
+  writeUIntBE(value: number, offset: number, byteLength: number, noAssert?: boolean): number;
+  writeIntLE(value: number, offset: number, byteLength: number, noAssert?: boolean): number;
+  writeIntBE(value: number, offset: number, byteLength: number, noAssert?: boolean): number;
+  readUIntLE(offset: number, byteLength: number, noAssert?: boolean): number;
+  readUIntBE(offset: number, byteLength: number, noAssert?: boolean): number;
+  readIntLE(offset: number, byteLength: number, noAssert?: boolean): number;
+  readIntBE(offset: number, byteLength: number, noAssert?: boolean): number;
+  readUInt8(offset: number, noAssert?: boolean): number;
+  readUInt16LE(offset: number, noAssert?: boolean): number;
+  readUInt16BE(offset: number, noAssert?: boolean): number;
+  readUInt32LE(offset: number, noAssert?: boolean): number;
+  readUInt32BE(offset: number, noAssert?: boolean): number;
+  readBigUInt64LE(offset: number): bigint;
+  readBigUInt64BE(offset: number): bigint;
+  readInt8(offset: number, noAssert?: boolean): number;
+  readInt16LE(offset: number, noAssert?: boolean): number;
+  readInt16BE(offset: number, noAssert?: boolean): number;
+  readInt32LE(offset: number, noAssert?: boolean): number;
+  readInt32BE(offset: number, noAssert?: boolean): number;
+  readBigInt64LE(offset: number): bigint;
+  readBigInt64BE(offset: number): bigint;
+  readFloatLE(offset: number, noAssert?: boolean): number;
+  readFloatBE(offset: number, noAssert?: boolean): number;
+  readDoubleLE(offset: number, noAssert?: boolean): number;
+  readDoubleBE(offset: number, noAssert?: boolean): number;
+  reverse(): this;
+  swap16(): Buffer;
+  swap32(): Buffer;
+  swap64(): Buffer;
+  writeUInt8(value: number, offset: number, noAssert?: boolean): number;
+  writeUInt16LE(value: number, offset: number, noAssert?: boolean): number;
+  writeUInt16BE(value: number, offset: number, noAssert?: boolean): number;
+  writeUInt32LE(value: number, offset: number, noAssert?: boolean): number;
+  writeUInt32BE(value: number, offset: number, noAssert?: boolean): number;
+  writeBigUInt64LE(value: bigint, offset: number): number;
+  writeBigUInt64BE(value: bigint, offset: number): number;
+  writeInt8(value: number, offset: number, noAssert?: boolean): number;
+  writeInt16LE(value: number, offset: number, noAssert?: boolean): number;
+  writeInt16BE(value: number, offset: number, noAssert?: boolean): number;
+  writeInt32LE(value: number, offset: number, noAssert?: boolean): number;
+  writeInt32BE(value: number, offset: number, noAssert?: boolean): number;
+  writeBigInt64LE(value: bigint, offset: number): number;
+  writeBigInt64BE(value: bigint, offset: number): number;
+  writeFloatLE(value: number, offset: number, noAssert?: boolean): number;
+  writeFloatBE(value: number, offset: number, noAssert?: boolean): number;
+  writeDoubleLE(value: number, offset: number, noAssert?: boolean): number;
+  writeDoubleBE(value: number, offset: number, noAssert?: boolean): number;
+  fill(value: any, offset?: number, end?: number): this;
+  indexOf(value: string | number | Buffer, byteOffset?: number, encoding?: string): number;
+  lastIndexOf(value: string | number | Buffer, byteOffset?: number, encoding?: string): number;
+  includes(value: string | number | Buffer, byteOffset?: number, encoding?: string): boolean;
+
+  /**
+   * Allocates a new buffer containing the given {str}.
+   *
+   * @param str String to store in buffer.
+   * @param encoding encoding to use, optional.  Default is 'utf8'
+   */
+  constructor (str: string, encoding?: string);
+  /**
+   * Allocates a new buffer of {size} octets.
+   *
+   * @param size count of octets to allocate.
+   */
+  constructor (size: number);
+  /**
+   * Allocates a new buffer containing the given {array} of octets.
+   *
+   * @param array The octets to store.
+   */
+  constructor (array: Uint8Array);
+  /**
+   * Produces a Buffer backed by the same allocated memory as
+   * the given {ArrayBuffer}.
+   *
+   *
+   * @param arrayBuffer The ArrayBuffer with which to share memory.
+   */
+  constructor (arrayBuffer: ArrayBuffer);
+  /**
+   * Allocates a new buffer containing the given {array} of octets.
+   *
+   * @param array The octets to store.
+   */
+  constructor (array: any[]);
+  /**
+   * Copies the passed {buffer} data onto a new {Buffer} instance.
+   *
+   * @param buffer The buffer to copy.
+   */
+  constructor (buffer: Buffer);
+  prototype: Buffer;
+  /**
+   * Allocates a new Buffer using an {array} of octets.
+   *
+   * @param array
+   */
+  static from(array: any[]): Buffer;
+  /**
+   * When passed a reference to the .buffer property of a TypedArray instance,
+   * the newly created Buffer will share the same allocated memory as the TypedArray.
+   * The optional {byteOffset} and {length} arguments specify a memory range
+   * within the {arrayBuffer} that will be shared by the Buffer.
+   *
+   * @param arrayBuffer The .buffer property of a TypedArray or a new ArrayBuffer()
+   * @param byteOffset
+   * @param length
+   */
+  static from(arrayBuffer: ArrayBuffer, byteOffset?: number, length?: number): Buffer;
+  /**
+   * Copies the passed {buffer} data onto a new Buffer instance.
+   *
+   * @param buffer
+   */
+  static from(buffer: Buffer | Uint8Array): Buffer;
+  /**
+   * Creates a new Buffer containing the given JavaScript string {str}.
+   * If provided, the {encoding} parameter identifies the character encoding.
+   * If not provided, {encoding} defaults to 'utf8'.
+   *
+   * @param str
+   */
+  static from(str: string, encoding?: string): Buffer;
+  /**
+   * Returns true if {obj} is a Buffer
+   *
+   * @param obj object to test.
+   */
+  static isBuffer(obj: any): obj is Buffer;
+  /**
+   * Returns true if {encoding} is a valid encoding argument.
+   * Valid string encodings in Node 0.12: 'ascii'|'utf8'|'utf16le'|'ucs2'(alias of 'utf16le')|'base64'|'binary'(deprecated)|'hex'
+   *
+   * @param encoding string to test.
+   */
+  static isEncoding(encoding: string): boolean;
+  /**
+   * Gives the actual byte length of a string. encoding defaults to 'utf8'.
+   * This is not the same as String.prototype.length since that returns the number of characters in a string.
+   *
+   * @param string string to test.
+   * @param encoding encoding used to evaluate (defaults to 'utf8')
+   */
+  static byteLength(string: string, encoding?: string): number;
+  /**
+   * Returns a buffer which is the result of concatenating all the buffers in the list together.
+   *
+   * If the list has no items, or if the totalLength is 0, then it returns a zero-length buffer.
+   * If the list has exactly one item, then the first item of the list is returned.
+   * If the list has more than one item, then a new Buffer is created.
+   *
+   * @param list An array of Buffer objects to concatenate
+   * @param totalLength Total length of the buffers when concatenated.
+   *   If totalLength is not provided, it is read from the buffers in the list. However, this adds an additional loop to the function, so it is faster to provide the length explicitly.
+   */
+  static concat(list: Uint8Array[], totalLength?: number): Buffer;
+  /**
+   * The same as buf1.compare(buf2).
+   */
+  static compare(buf1: Uint8Array, buf2: Uint8Array): number;
+  /**
+   * Allocates a new buffer of {size} octets.
+   *
+   * @param size count of octets to allocate.
+   * @param fill if specified, buffer will be initialized by calling buf.fill(fill).
+   *    If parameter is omitted, buffer will be filled with zeros.
+   * @param encoding encoding used for call to buf.fill while initializing
+   */
+  static alloc(size: number, fill?: string | Buffer | number, encoding?: string): Buffer;
+  /**
+   * Allocates a new buffer of {size} octets, leaving memory not initialized, so the contents
+   * of the newly created Buffer are unknown and may contain sensitive data.
+   *
+   * @param size count of octets to allocate
+   */
+  static allocUnsafe(size: number): Buffer;
+  /**
+   * Allocates a new non-pooled buffer of {size} octets, leaving memory not initialized, so the contents
+   * of the newly created Buffer are unknown and may contain sensitive data.
+   *
+   * @param size count of octets to allocate
+   */
+  static allocUnsafeSlow(size: number): Buffer;
+}
+
+/**
+ * A binary large object. Present for compatibility, since some libraries
+ * expect to find it; prefer {@link Buffer} for working with binary data.
+ *
+ * PopClip's implementation is the `node-blob` package,
+ * which is smaller than the Web API `Blob`: there is no `text()`,
+ * `arrayBuffer()` or `stream()` method. Read the contents through
+ * {@link buffer} instead.
+ *
+ * A `Blob` may be passed as the body of an {@link XMLHttpRequest}.
+ *
+ * @example
+ * ```js
+ * const blob = new Blob(["hello"], { type: "text/plain" });
+ * print(blob.size, blob.type, blob.buffer.toString("utf8"));
+ * ```
+ * @hidden
+ */
+declare class Blob {
+  /**
+   * @param blobParts Parts to concatenate. Strings, `Buffer`s, `ArrayBuffer`s,
+   * typed arrays and other `Blob`s are used directly; anything else is
+   * converted to a string first.
+   * @param options `type` sets the blob's MIME type.
+   */
+  constructor(
+    blobParts?: Array<string | Buffer | ArrayBuffer | ArrayBufferView | Blob>,
+    options?: { type?: string },
+  );
+
+  /** The blob's contents. */
+  buffer: Buffer;
+
+  /** Length of the contents in bytes, or 0 once the blob has been closed. */
+  readonly size: number;
+
+  /** The blob's MIME type, or the empty string if none was given. */
+  readonly type: string;
+
+  /** Whether {@link close} has been called. */
+  readonly isClosed: boolean;
+
+  /**
+   * Returns a new blob containing the given byte range. Negative values count
+   * back from the end of the blob.
+   */
+  slice(start?: number, end?: number, type?: string): Blob;
+
+  /** Marks the blob closed, after which {@link size} reads as 0. */
+  close(): void;
+}
+
+/**
+ * Encodes a string as UTF-8. Present for compatibility, since some libraries
+ * expect to find it; prefer `Buffer.from(string, "utf8")`.
+ *
+ * PopClip's implementation supports only UTF-8, via the `encode()` method
+ * and the `encoding` property, and returns a {@link Buffer} rather than
+ * the `Uint8Array` returned by the Web API. (`Buffer` is a `Uint8Array`
+ * subclass, so it may be used wherever one is expected.)
+ * @hidden
+ */
+declare class TextEncoder {
+  /** Always `"utf-8"`. */
+  readonly encoding: string;
+
+  /** Encodes the given string as UTF-8. */
+  encode(input: string): Buffer;
+}
+
+/**
+ * Parsed URL, as provided by core-js. Instances may be passed directly to
+ * {@link PopClip.openUrl} and {@link PopClip.share}.
+ */
+declare class URL {
+  constructor(url: string, base?: string | URL);
+  hash: string;
+  host: string;
+  hostname: string;
+  href: string;
+  readonly origin: string;
+  password: string;
+  pathname: string;
+  port: string;
+  protocol: string;
+  search: string;
+  readonly searchParams: URLSearchParams;
+  username: string;
+  toString(): string;
+  toJSON(): string;
+}
+
+/** Parsed query string, as provided by core-js. */
+declare class URLSearchParams {
+  constructor(
+    init?: string | string[][] | Record<string, string> | URLSearchParams,
+  );
+  append(name: string, value: string): void;
+  delete(name: string): void;
+  get(name: string): string | null;
+  getAll(name: string): string[];
+  has(name: string): boolean;
+  set(name: string, value: string): void;
+  sort(): void;
+  forEach(
+    callback: (value: string, name: string, parent: URLSearchParams) => void,
+  ): void;
+  keys(): IterableIterator<string>;
+  values(): IterableIterator<string>;
+  entries(): IterableIterator<[string, string]>;
+  [Symbol.iterator](): IterableIterator<[string, string]>;
+  toString(): string;
+}
+
+/**
+ * Makes an HTTP request. PopClip implements the subset of the Web API
+ * declared here; there is no `fetch()`.
+ *
+ * Requires the `network` entitlement. Most extensions use the bundled `axios`
+ * library, which is built on this.
+ *
+ * @example
+ * ```js
+ * const xhr = new XMLHttpRequest();
+ * xhr.open("GET", "https://example.com/", true);
+ * xhr.onload = () => print(xhr.status, xhr.responseText);
+ * xhr.send();
+ * ```
+ */
+declare class XMLHttpRequest {
+  /** The response body, decoded according to {@link responseType}. */
+  readonly response: any;
+  /** The response body as text. */
+  readonly responseText: string;
+  /** How to interpret the response body, e.g. `"text"`, `"json"`, `"blob"`. */
+  responseType: string;
+  /** The final URL, after any redirects. */
+  readonly responseURL: string;
+  /** Request state: 0 unsent, 1 opened, 2 headers received, 3 loading, 4 done. */
+  readonly readyState: number;
+  /** HTTP status code. */
+  readonly status: number;
+  /** HTTP status message. */
+  readonly statusText: string;
+  /** Timeout in milliseconds. 0, the default, means no timeout. */
+  timeout: number;
+
+  onreadystatechange: (() => void) | null;
+  onerror: (() => void) | null;
+  onabort: (() => void) | null;
+  ontimeout: (() => void) | null;
+  onload: (() => void) | null;
+  onloadstart: (() => void) | null;
+  onloadend: (() => void) | null;
+
+  /** Initializes the request. */
+  open(httpMethod: string, url: string, async?: boolean): void;
+  /** Sends the request, with an optional body. */
+  send(body?: string | Blob | ArrayBuffer | ArrayBufferView | null): void;
+  /** Aborts the request. */
+  abort(): void;
+  /** Sets a request header. Call after {@link open} and before {@link send}. */
+  setRequestHeader(name: string, value: string): void;
+  /** All response headers as a single string, with lowercased names. */
+  getAllResponseHeaders(): string;
+  /** A single response header, or null if not present. */
+  getResponseHeader(name: string): string | null;
+}
+
+/** Calls a function after at least the given delay in milliseconds. */
+declare function setTimeout(
+  handler: () => void,
+  timeoutMilliseconds?: number,
+): number;
+
+/** Cancels a timeout created by {@link setTimeout}. */
+declare function clearTimeout(id?: number): void;
+
+/** Calls a function repeatedly, with the given interval in milliseconds. */
+declare function setInterval(
+  handler: () => void,
+  intervalMilliseconds?: number,
+): number;
+
+/** Cancels an interval created by {@link setInterval}. */
+declare function clearInterval(id?: number): void;
+
+/**
+ * Decodes a base64-encoded string. Present for compatibility, since some
+ * libraries expect to find it; prefer {@link Util.base64Decode}.
+ * @hidden
+ */
+declare function atob(encodedData: string): string;
+
+/**
+ * Encodes a string as base64. Present for compatibility, since some libraries
+ * expect to find it; prefer {@link Util.base64Encode}.
+ * @hidden
+ */
+declare function btoa(stringToEncode: string): string;
+
+/** Deep-copies a value using the structured clone algorithm. */
+declare function structuredClone<T>(value: T): T;
+
+/**
+ * A reference to the global object, defined only so that bundled libraries
+ * which probe for a browser environment still work. There is no DOM behind it
+ * and no other browser API is implied by its presence. Declared so that such
+ * code compiles; extensions should not use it.
+ *
+ * @hidden
+ */
+declare const window: typeof globalThis;
