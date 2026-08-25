@@ -6,8 +6,8 @@
   },
   "license": "MIT",
   "scripts": {
-    "check": "bun run build && tsc --noEmit",
-    "build": "bun run build.ts"
+    "check": "npm run build && tsc --noEmit",
+    "build": "node build.mjs"
   },
   "types": "./popclip.d.ts",
   "repository": {
