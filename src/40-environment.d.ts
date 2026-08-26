@@ -11,12 +11,13 @@
 
 /**
  * Node-compatible `Buffer`, a `Uint8Array` subclass for working with binary
- * data. PopClip installs it as a global; the implementation is the `buffer`
- * npm package (6.0.3), which is also loadable as `require("buffer")`.
+ * data. PopClip installs it as a global; the implementation is a modified
+ * version of the `buffer` npm package (6.0.3), which is also loadable as
+ * `require("buffer")`. The modification adds the `"base64url"` encoding.
  *
  * @example
  * ```js
- * const b = Buffer.from("hello", "utf8");
+ * const b = Buffer.from("hello");
  * print(b.toString("base64")); // aGVsbG8=
  * ```
  */
@@ -404,14 +405,16 @@ declare function clearInterval(id?: number): void;
 
 /**
  * Decodes a base64-encoded string. Present for compatibility, since some
- * libraries expect to find it; prefer {@link Util.base64Decode}.
+ * libraries expect to find it; prefer {@link Util.base64Decode} or
+ * `Buffer.from(encodedData, "base64")`.
  * @hidden
  */
 declare function atob(encodedData: string): string;
 
 /**
  * Encodes a string as base64. Present for compatibility, since some libraries
- * expect to find it; prefer {@link Util.base64Encode}.
+ * expect to find it; prefer {@link Util.base64Encode} or
+ * `Buffer.from(stringToEncode).toString("base64")`.
  * @hidden
  */
 declare function btoa(stringToEncode: string): string;

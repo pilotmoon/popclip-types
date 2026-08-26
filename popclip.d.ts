@@ -947,13 +947,14 @@ interface Util {
   cleanHtml(html: string, options?: object): string;
 
   /**
-   * Encode a string as UTF-8 then Base-64 encode the result.
+   * Base-64 encode a string or an array of bytes, such as the output of
+   * {@link Util.hash} or {@link Util.hmac}.
    *
-   * @param string The string to encode.
+   * @param data The string or bytes to encode.
    * @param options
    */
   base64Encode(
-    string: string,
+    data: string | Uint8Array,
     options?: {
       /**
        * Whether to encode using the URL-safe variant, with `-` and `_` substituted for `+` and `/`. Default is no.
@@ -967,15 +968,27 @@ interface Util {
   ): string;
 
   /**
-   * Decode a Base-64 string and interpret the result as a UTF-8 string.
+   * Decode a Base-64 string.
    *
    * Accepts both standard and URL-safe variants as input. Also accepts input with or without the `=`/`==` end padding.
-   * Throws an error if the input cannot be decoded as a UTF-8 string.
+   *
+   * Returns the decoded data as a string, and throws an error if it is not text. Pass `bytes: true` to receive the bytes themselves instead, which places no such requirement on the data.
    *
    * @param string
-   * @returns The decoded string
+   * @param options
+   * @returns The decoded string, or the decoded bytes when `bytes` is true.
    */
-  base64Decode(string: string): string;
+  base64Decode(string: string, options?: { bytes?: false }): string;
+  base64Decode(string: string, options: { bytes: true }): Uint8Array;
+  base64Decode(
+    string: string,
+    options?: {
+      /**
+       * Whether to return the decoded bytes as a `Uint8Array` rather than as a string. Default is no.
+       */
+      bytes?: boolean;
+    },
+  ): string | Uint8Array;
 
   /** Builds a URL query string from an object of parameters. */
   buildQuery: (params: { [key: string]: string }) => string;
@@ -1051,6 +1064,15 @@ interface Util {
   hmac(
     data: Uint8Array,
     key: Uint8Array,
+    algorithm: "sha1" | "md5" | "sha256" | "sha384" | "sha512" | "sha224",
+  ): Uint8Array;
+
+  /**
+   * Generate the hash (message digest) of the supplied data using the specified algorithm.
+   * Implemented internally by Apple's CommonCrypto.
+   */
+  hash(
+    data: Uint8Array,
     algorithm: "sha1" | "md5" | "sha256" | "sha384" | "sha512" | "sha224",
   ): Uint8Array;
 
@@ -2378,12 +2400,13 @@ type Entitlement = "network" | "dynamic" | "script";
 
 /**
  * Node-compatible `Buffer`, a `Uint8Array` subclass for working with binary
- * data. PopClip installs it as a global; the implementation is the `buffer`
- * npm package (6.0.3), which is also loadable as `require("buffer")`.
+ * data. PopClip installs it as a global; the implementation is a modified
+ * version of the `buffer` npm package (6.0.3), which is also loadable as
+ * `require("buffer")`. The modification adds the `"base64url"` encoding.
  *
  * @example
  * ```js
- * const b = Buffer.from("hello", "utf8");
+ * const b = Buffer.from("hello");
  * print(b.toString("base64")); // aGVsbG8=
  * ```
  */
@@ -2771,14 +2794,16 @@ declare function clearInterval(id?: number): void;
 
 /**
  * Decodes a base64-encoded string. Present for compatibility, since some
- * libraries expect to find it; prefer {@link Util.base64Decode}.
+ * libraries expect to find it; prefer {@link Util.base64Decode} or
+ * `Buffer.from(encodedData, "base64")`.
  * @hidden
  */
 declare function atob(encodedData: string): string;
 
 /**
  * Encodes a string as base64. Present for compatibility, since some libraries
- * expect to find it; prefer {@link Util.base64Encode}.
+ * expect to find it; prefer {@link Util.base64Encode} or
+ * `Buffer.from(stringToEncode).toString("base64")`.
  * @hidden
  */
 declare function btoa(stringToEncode: string): string;

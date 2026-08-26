@@ -4,6 +4,20 @@ Versions are `<generation>.<PopClip build>.<edit>`: the middle number is the
 PopClip build the definitions describe, and the last is bumped for edits that
 do not correspond to a new build. Only significant changes are listed.
 
+## Beta / Unreleased
+
+- Added `util.hash()`, the unkeyed counterpart to `util.hmac()`: same
+  algorithm set, takes a `Uint8Array` and returns a `Uint8Array`.
+- `util.base64Encode()` now takes `string | Uint8Array` rather than `string`.
+  A widening, so existing calls are unaffected.
+- `util.base64Decode()` takes an options object, and returns `Uint8Array`
+  rather than `string` when passed `{ bytes: true }`. Declared as overloads,
+  so a call without options still returns `string`.
+- Documented the `"base64url"` encoding, added by PopClip's modified `buffer`.
+
+The version is deliberately not bumped yet: the middle component names the
+PopClip build that ships these, which is not known until it does.
+
 ## 2.6159.0
 
 Reorganised and made self-contained. The file now declares PopClip's whole
