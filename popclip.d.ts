@@ -950,6 +950,9 @@ interface Util {
    * Base-64 encode a string or an array of bytes, such as the output of
    * {@link Util.hash} or {@link Util.hmac}.
    *
+   * The output is a single unbroken string: no line breaks are inserted,
+   * however long it is.
+   *
    * @param data The string or bytes to encode.
    * @param options
    */
@@ -971,6 +974,9 @@ interface Util {
    * Decode a Base-64 string.
    *
    * Accepts both standard and URL-safe variants as input. Also accepts input with or without the `=`/`==` end padding.
+   *
+   * Whitespace and other characters outside the base64 alphabet are ignored,
+   * so input wrapped into lines, as in email or PEM files, decodes as-is.
    *
    * Returns the decoded data as a string, and throws an error if it is not text. Pass `bytes: true` to receive the bytes themselves instead, which places no such requirement on the data.
    *
@@ -2400,19 +2406,43 @@ type Entitlement = "network" | "dynamic" | "script";
 
 /**
  * Node-compatible `Buffer`, a `Uint8Array` subclass for working with binary
- * data. PopClip installs it as a global; the implementation is a modified
- * version of the `buffer` npm package (6.0.3), which is also loadable as
- * `require("buffer")`. The modification adds the `"base64url"` encoding.
+ * data. PopClip installs it as a global and it is also loadable as
+ * `require("buffer")`. The implementation is a modified
+ * version of the `buffer` npm package (6.0.3).
  *
- * For usage, refer to the
- * [Node.js `Buffer` documentation](https://nodejs.org/api/buffer.html):
+ * Refer also to the [Node.js `Buffer` documentation](https://nodejs.org/api/buffer.html):
  * the API follows Node's, though only the members declared here are
  * guaranteed to be present.
  *
+ * The usual way in is {@link Buffer.from}, and the way back out is
+ * {@link Buffer.toString}: together they convert between strings, binary
+ * data and binary-to-text encodings. The supported encodings are `"utf8"`
+ * (the default), `"utf16le"`, `"latin1"`, `"ascii"`, `"base64"`,
+ * `"base64url"` and `"hex"`.
+ *
  * @example
  * ```js
- * const b = Buffer.from("hello");
+ * // Buffer.from() encodes a string into bytes
+ * const b = Buffer.from("hello"); // 5 bytes of UTF-8: 68 65 6c 6c 6f
+ * print(b.length); // 5
+ *
+ * // toString() renders the bytes in any encoding
+ * print(b.toString("hex")); // 68656c6c6f
  * print(b.toString("base64")); // aGVsbG8=
+ *
+ * // pass an encoding to Buffer.from() to decode from it
+ * print(Buffer.from("aGVsbG8=", "base64").toString()); // hello
+ * print(Buffer.from("68656c6c6f", "hex").toString()); // hello
+ *
+ * // bytes can also come from an array, or any Uint8Array
+ * print(Buffer.from([0xfb, 0xef, 0xff]).toString("base64url")); // --__
+ *
+ * // byte length is not string length, once outside ASCII
+ * print("héllo".length, Buffer.byteLength("héllo")); // 5 6
+ *
+ * // wrap a Uint8Array with Buffer.from() to use Buffer's methods on it
+ * const digest = Buffer.from(util.hash(b, "sha256"));
+ * print(digest.toString("hex")); // 2cf24dba5fb0a30e26e83b2ac5b9e29e…
  * ```
  */
 declare class Buffer extends Uint8Array {

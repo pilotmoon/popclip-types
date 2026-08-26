@@ -890,6 +890,9 @@ interface Util {
    * Base-64 encode a string or an array of bytes, such as the output of
    * {@link Util.hash} or {@link Util.hmac}.
    *
+   * The output is a single unbroken string: no line breaks are inserted,
+   * however long it is.
+   *
    * @param data The string or bytes to encode.
    * @param options
    */
@@ -911,6 +914,9 @@ interface Util {
    * Decode a Base-64 string.
    *
    * Accepts both standard and URL-safe variants as input. Also accepts input with or without the `=`/`==` end padding.
+   *
+   * Whitespace and other characters outside the base64 alphabet are ignored,
+   * so input wrapped into lines, as in email or PEM files, decodes as-is.
    *
    * Returns the decoded data as a string, and throws an error if it is not text. Pass `bytes: true` to receive the bytes themselves instead, which places no such requirement on the data.
    *

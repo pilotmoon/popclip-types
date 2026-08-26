@@ -14,6 +14,10 @@ do not correspond to a new build. Only significant changes are listed.
   rather than `string` when passed `{ bytes: true }`. Declared as overloads,
   so a call without options still returns `string`.
 - Documented the `"base64url"` encoding, added by PopClip's modified `buffer`.
+- Documented base64 whitespace behavior: `util.base64Encode()` never
+  inserts line breaks, and `util.base64Decode()` ignores whitespace and
+  other non-alphabet characters in its input (per the accompanying PopClip
+  fix), so line-wrapped base64 decodes as-is.
 - `URL` and `URLSearchParams` are now fully documented in place — class
   overviews, examples and per-member docs — rather than deferring to the
   Web API.
