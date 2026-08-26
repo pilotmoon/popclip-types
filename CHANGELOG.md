@@ -14,6 +14,16 @@ do not correspond to a new build. Only significant changes are listed.
   rather than `string` when passed `{ bytes: true }`. Declared as overloads,
   so a call without options still returns `string`.
 - Documented the `"base64url"` encoding, added by PopClip's modified `buffer`.
+- `URL` and `URLSearchParams` are now fully documented in place — class
+  overviews, examples and per-member docs — rather than deferring to the
+  Web API.
+- The environment globals name what they follow, with a link to the MDN or
+  Node.js reference: `Buffer`, `Blob`, `TextEncoder`, `URL`,
+  `URLSearchParams`, `XMLHttpRequest`, the timer functions,
+  `structuredClone`, `atob` and `btoa`.
+- Every `Buffer` member now has a doc comment (they were previously bare, so
+  the generated reference omitted them), and the legacy `{str}`-style
+  comments inherited from DefinitelyTyped are cleaned up.
 
 The version is deliberately not bumped yet: the middle component names the
 PopClip build that ships these, which is not known until it does.

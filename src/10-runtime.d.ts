@@ -380,7 +380,7 @@ interface PopClip {
    *
    * Any parameters etc. in the URL must be appropriately percent-encoded. JavaScript provides the
    * [encodeURIComponent()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent)
-   * function for this. Alternatively you can use the [URL](https://developer.mozilla.org/en-US/docs/Web/API/URL) class,
+   * function for this. Alternatively you can use the {@link URL} class,
    * which is available as a global in PopClip's JavaScript environment. When a `URL`
    * instance is passed, any `+` characters in it are first replaced with `%20`: a query
    * built with {@link URLSearchParams} encodes spaces as `+` (form encoding), which not
