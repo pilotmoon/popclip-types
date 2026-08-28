@@ -2398,8 +2398,16 @@ type Entitlement = "network" | "dynamic" | "script";
    ==========================================================================
 
    The globals PopClip's JavaScript environment provides beyond the language
-   itself. The engine is JavaScriptCore with core-js polyfills and a small set
-   of shims; it is not a browser and not Node. Only what is declared here
+   itself. The engine is macOS's JavaScriptCore; it is not a browser and not
+   Node. ES2023 is the guaranteed language baseline on every macOS version
+   PopClip runs on. Built-in objects and methods from ES2024 and ES2025 — for
+   example `Object.groupBy`, `Promise.withResolvers`, the iterator helpers and
+   the `Set` operations — are also available on every macOS version (the
+   exceptions: `ArrayBuffer.prototype.transfer` needs macOS 14.4, and
+   `Float16Array` needs macOS 15.2). New *syntax* is capped by the system
+   engine, however, and may not parse on older macOS: the regular expression
+   `v` flag (ES2024) requires macOS 14, and regular expression modifiers
+   `(?i:…)` (ES2025) require macOS 26. Only what is declared here
    exists: there is no `fetch`, `document`, `localStorage` or `process`, and
    `Blob` and `TextEncoder` are narrower than their Web API namesakes.
    ========================================================================== */
@@ -2704,9 +2712,9 @@ declare class TextEncoder {
 /**
  * Parses a URL string into its components, and builds URL strings from
  * components. This is the standard Web API
- * [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) class, as
- * provided by core-js: MDN documents it in further depth, though only the
- * members declared here are guaranteed to be present.
+ * [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL) class: MDN
+ * documents it in further depth, though only the members declared here are
+ * guaranteed to be present.
  *
  * The component properties may be assigned to modify the URL in place; each
  * assignment updates {@link href}, percent-encoding characters where the URL
@@ -2769,8 +2777,8 @@ declare class URL {
  * An ordered list of name–value pairs, representing a parsed URL query
  * string. This is the standard Web API
  * [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
- * class, as provided by core-js: MDN documents it in further depth, though
- * only the members declared here are guaranteed to be present.
+ * class: MDN documents it in further depth, though only the members declared
+ * here are guaranteed to be present.
  *
  * Obtain one from a {@link URL}'s `searchParams` property, or construct one
  * standalone. Names and values are stored in decoded form; percent-decoding
