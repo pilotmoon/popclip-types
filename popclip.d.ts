@@ -1690,6 +1690,13 @@ interface StringOption extends OptionBase {
    * Useful for longer inputs such as prompts. Default is false.
    */
   readonly multiline?: boolean;
+
+  /**
+   * Identifier of a removed option whose stored value should carry over to this option.
+   * While that value is a non-empty string, it is used as this option's value; the first
+   * change the user makes to this option clears it.
+   */
+  readonly migrateFrom?: string;
 }
 
 /**
@@ -1726,6 +1733,14 @@ interface MultipleOption extends OptionBase {
    * rather than to the first value.
    */
   readonly allowNone?: boolean;
+
+  /**
+   * Identifier of a removed option whose stored value should carry over to this option.
+   * While that value is a non-empty string, it is used as this option's value; the first
+   * change the user makes to this option clears it. Useful with {@link allowOther}, to
+   * consolidate a former free-text companion option into this one.
+   */
+  readonly migrateFrom?: string;
 }
 
 /**
