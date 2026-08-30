@@ -272,7 +272,10 @@ interface PopClip {
    * To call a specific handler (subroutine) in the script, name it in the options — see {@link AppleScriptOptions}.
    *
    * Bad input throws immediately, and nothing runs. A script that runs and errors rejects the promise with an
-   * error carrying the AppleScript error number as its `errorNumber` property.
+   * error carrying the AppleScript error number as its `errorNumber` property. No error number
+   * is special here — the static config's error-502 settings convention belongs to that
+   * wrapper; to send the user to the extension's settings, branch on `errorNumber` and throw
+   * {@link PopClip.settingsRequiredError | settingsRequiredError()}.
    *
    * @param source The AppleScript source text.
    * @param options See {@link AppleScriptOptions}.
@@ -347,6 +350,116 @@ interface PopClip {
     name: string,
     options?: { input?: string },
   ): Promise<AppleScriptResult>;
+
+  /**
+   * Run a shell script, given as source text.
+   *
+   * Requires the `script` entitlement, and may only be called during the action phase.
+   *
+   * By default the interpreter is executed directly, with no shell involved and a minimal,
+   * deterministic environment: exactly `PATH=/usr/bin:/bin:/usr/sbin:/sbin` and
+   * `LANG=en_US.UTF-8`, plus anything given in `env` (which may override both); the
+   * `shellMode` option can route the run through the user's shell instead. The working directory is the
+   * extension's package directory. The source is delivered to the interpreter on standard
+   * input, so an `interpreter` is required for this form, and the `stdin` and `arguments`
+   * options are not available — they belong to
+   * {@link runShellScriptFile | runShellScriptFile()}.
+   *
+   * To pass data into the script, prefer an environment variable since it needs no escaping.
+   * To compose text into the
+   * command string itself, escape it with {@link Util.shellEscape | util.shellEscape}.
+   *
+   * Bad input throws immediately, and nothing runs. A script that could not be run, exits with
+   * a nonzero status, or is killed by a signal rejects the promise with an error carrying
+   * `status`, `stdout`, `stderr` and `terminationReason` (`"exit"` or `"uncaughtSignal"`)
+   * properties.
+   *
+   * There is no timeout; a run ends when the script exits, or when the user cancels the
+   * action by clicking the spinner, which kills the script.
+   *
+   * @param source The script source text.
+   * @param options See {@link ShellScriptOptions}. `interpreter` is required.
+   * @returns A promise for the script's output — see {@link ShellScriptResult}.
+   *
+   * @example
+   * ```js
+   * // #popclip speak definition example
+   * // name: Speak Definition
+   * // language: javascript
+   * // entitlements: [script]
+   * const word = popclip.input.text.trim();
+   * const definition = util.getDictionaryDefinition(word) ?? "no definition";
+   * await popclip.runShellScript("say $definition", {
+   *  interpreter: "zsh",
+   *  env: { definition },
+   * });
+   * ```
+   */
+  runShellScript(
+    source: string,
+    options: ShellScriptOptions,
+  ): Promise<ShellScriptResult>;
+
+  /**
+   * Run a shell script from a file in the extension package.
+   *
+   * The same as {@link runShellScript | runShellScript()} in every way except where the script
+   * comes from: `path` names a script file inside the package, relative to the package root;
+   * paths outside the package are refused. Standard input is free in this form, so the `stdin`
+   * and `arguments` options are available. Without an `interpreter`, the file must be
+   * executable with a shebang (`#!`) line.
+   *
+   * To pass data into the script, prefer an environment variable, stdin, or positional parameter,
+   * since they need no escaping. To compose text into the
+   * command string itself, escape it with {@link Util.shellEscape | util.shellEscape}.
+   *
+   * @param path Package-relative path of the script file.
+   * @param options See {@link ShellScriptOptions}.
+   * @returns A promise for the script's output — see {@link ShellScriptResult}.
+   *
+   * @example
+   * ```js
+   * const { stdout } = await popclip.runShellScriptFile("scripts/convert.sh", {
+   *   arguments: [popclip.input.text],
+   *   stdin: popclip.input.html,
+   * });
+   * ```
+   */
+  runShellScriptFile(
+    path: string,
+    options?: ShellScriptOptions,
+  ): Promise<ShellScriptResult>;
+
+  /**
+   * Perform a macOS Service — one of the entries in the app's Services menu — with the given
+   * input.
+   *
+   * May only be called during the action phase.
+   *
+   * Note the name to use is the service's *default* menu item name, which for some of
+   * Apple's own services differs from the localized name the Services menu displays. For
+   * example, the Stickies service appears in an English-language menu as "Make New Sticky
+   * Note", but its name for this call is `"Make Sticky"`.
+   *
+   * Bad input throws immediately, and nothing runs: a missing name, missing input, or a
+   * content dictionary with no usable string entry. A service macOS could not perform — an
+   * unknown name, or the providing app refused — rejects the promise. Resolves with
+   * undefined once the service call returns; any content the service writes back is not
+   * read.
+   *
+   * @param name The service's default menu item name.
+   * @param input What the service acts on: a string of plain text, or a content dictionary
+   * of pasteboard types to strings, such as {@link Input.content | popclip.input.content}.
+   *
+   * @example
+   * ```js
+   * await popclip.performService("Make Sticky", popclip.input.text);
+   * ```
+   */
+  performService(
+    name: string,
+    input: string | Record<string, string>,
+  ): Promise<void>;
 
   /**
    * Show a file or folder in the Finder. A file is selected inside its enclosing folder; a
@@ -744,6 +857,59 @@ interface AppleScriptOptions {
 }
 
 /**
+ * Options for {@link PopClip.runShellScript} and {@link PopClip.runShellScriptFile}.
+ */
+interface ShellScriptOptions {
+  /**
+   * What runs the script: an absolute path, or a bare name (for example `"zsh"`,
+   * `"python3"`) resolved through the login shell's PATH — in every `shellMode`, since
+   * resolution and execution are separate. Required for inline source; optional for a script
+   * file that is executable with a shebang line.
+   */
+  interpreter?: string;
+  /**
+   * How the run is executed:
+   *
+   * - `"none"` (default): execute the interpreter — or the shebang script file itself —
+   *   directly, with `arguments` as its real argument vector. No shell is involved: the
+   *   fastest and most deterministic mode, with no shell profile output mixed into stdout.
+   * - `"login"`: run via the user's shell as a login shell (`-lc`), sourcing their profile —
+   *   the script sees the user's own PATH and environment, at the cost of whatever the
+   *   profile does.
+   * - `"nonlogin"`: run via the user's shell without `-l` — for setups whose environment
+   *   lives in `.zshenv` alone.
+   */
+  shellMode?: "none" | "login" | "nonlogin";
+  /**
+   * Extra environment variables for the script, string values only. The escaping-free way to
+   * pass data in.
+   */
+  env?: Record<string, string>;
+  /**
+   * Text delivered to the script on standard input. File form only.
+   */
+  stdin?: string;
+  /**
+   * Positional arguments for the script, arriving as `$1`, `$2`, … — strings only. File form
+   * only.
+   */
+  arguments?: string[];
+}
+
+/**
+ * What a successful shell script run resolves with. A failed run does not produce this — it
+ * rejects, with the same fields (plus `terminationReason`) carried on the error.
+ */
+interface ShellScriptResult {
+  /** The script's standard output. */
+  stdout: string;
+  /** The script's standard error output (also logged to the extension's debug output). */
+  stderr: string;
+  /** The exit status — always 0 here, since a nonzero exit rejects. */
+  status: number;
+}
+
+/**
  * The global `util` object acts as a container for various utility functions and constants. It implements  {@link Util}.
  */
 declare const util: Util;
@@ -786,6 +952,28 @@ interface Util {
    * @param text The text to define.
    */
   getDictionaryDefinition(text: string): string | undefined;
+
+  /**
+   * Escape text for literal inclusion in a POSIX shell (sh, bash, zsh) command line: the
+   * result is wrapped in single quotes, and every character of the original — quotes, spaces,
+   * `$`, backticks — arrives in the command as literal text, with nothing expanded or
+   * interpreted.
+   *
+   * For composing {@link PopClip.runShellScript | runShellScript} command strings; where they
+   * fit, prefer the channels that need no escaping at all: `env`, `stdin` and `arguments`.
+   *
+   * @param text The text to escape.
+   *
+   * @example
+   * ```js
+   * // count the lines of a selected file — the path may contain spaces or quotes
+   * const { stdout } = await popclip.runShellScript(
+   *   `wc -l < ${util.shellEscape(popclip.input.data.paths[0])}`,
+   *   { interpreter: "sh" },
+   * );
+   * ```
+   */
+  shellEscape(text: string): string;
 
   /**
    * The languages the system spell checker can check on this Mac, as objects pairing the spell

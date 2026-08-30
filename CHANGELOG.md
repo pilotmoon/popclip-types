@@ -6,6 +6,19 @@ do not correspond to a new build. Only significant changes are listed.
 
 ## Beta / Unreleased
 
+- Added `popclip.runShellScript()` and `popclip.runShellScriptFile()`: run a
+  shell script under the `script` entitlement, with `interpreter`, `shellMode`
+  (`"none"` direct exec by default, or `"login"`/`"nonlogin"` via the user's
+  shell), `env`, `stdin` and `arguments` options, resolving with
+  `{ stdout, stderr, status }` and rejecting on nonzero exit.
+- The settings signal (shell status 2 / AppleScript error 502) is a static
+  config convention only: `runShellScript()` and `runAppleScript()` reject
+  with the plain error — branch on `status`/`errorNumber` and throw
+  `settingsRequiredError()` to route to settings.
+- Added `util.shellEscape()`: escape text for literal inclusion in a POSIX
+  shell command line.
+- Added `popclip.performService()`: perform a macOS Service by its default
+  menu item name, with string or content-dictionary input.
 - Added `util.hash()`, the unkeyed counterpart to `util.hmac()`: same
   algorithm set, takes a `Uint8Array` and returns a `Uint8Array`.
 - `util.base64Encode()` now takes `string | Uint8Array` rather than `string`.
