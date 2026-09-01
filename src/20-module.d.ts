@@ -194,15 +194,16 @@ interface Extension<CustomOptions = Options> extends ActionProperties {
   keywords?: string;
 
   /**
-   * For snippets using the inverted syntax: how to interpret the snippet body.
-   * With {@link module} set, the body is loaded as a module.
+   * For snippets using the inverted syntax: the language of the snippet body.
+   * Defaults to `typescript` when the header's comment style is `//`.
    * @hidden
    */
   language?: "javascript" | "typescript" | "applescript";
 
   /**
    * Path to a JavaScript or TypeScript module to load. In an inverted-syntax
-   * snippet, set it to `true` to load the snippet body itself as the module.
+   * snippet, whether the body is a module is detected from its code (whether
+   * it exports anything); set `true` or `false` to override the detection.
    * @hidden
    */
   module?: string | boolean;
