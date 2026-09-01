@@ -1630,6 +1630,16 @@ interface Extension<CustomOptions = Options> extends ActionProperties {
   authServiceLabel?: LocalizableString;
 
   /**
+   * Which keychain the sign-in secret goes in: `sync` (the default) — the
+   * synchronizable keychain, shared across the user's devices via iCloud
+   * Keychain — or `local`, kept only on the Mac where the user signed in.
+   * The top-level counterpart of the per-option `keychain` key, for the
+   * internal auth secret which has no declared option.
+   * @hidden
+   */
+  authKeychain?: "sync" | "local";
+
+  /**
    * Overrides PopClip's automatic decision about allowing multiple instances.
    * @hidden
    */
@@ -1950,7 +1960,21 @@ interface BooleanOption extends OptionBase {
  * A concealed string option.
  */
 interface PasswordOption extends OptionBase {
-  readonly type: "password" | "secret";
+  readonly type: "password";
+}
+
+/**
+ * A concealed string option, persisted in the user's keychain.
+ */
+interface SecretOption extends OptionBase {
+  readonly type: "secret";
+
+  /**
+   * Which keychain the secret goes in: `sync` (the default) — the
+   * synchronizable keychain, shared across the user's devices via iCloud
+   * Keychain — or `local`, kept only on the Mac where it was entered.
+   */
+  readonly keychain?: "sync" | "local";
 }
 
 /**
@@ -1968,6 +1992,7 @@ type Option =
   | MultipleOption
   | BooleanOption
   | PasswordOption
+  | SecretOption
   | HeadingOption;
 
 /**
