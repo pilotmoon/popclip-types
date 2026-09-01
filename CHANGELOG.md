@@ -4,7 +4,7 @@ Versions are `<generation>.<PopClip build>.<edit>`: the middle number is the
 PopClip build the definitions describe, and the last is bumped for edits that
 do not correspond to a new build. Only significant changes are listed.
 
-## Beta / Unreleased
+## 2.6204.0
 
 - Added `popclip.runShellScript()` and `popclip.runShellScriptFile()`: run a
   shell script under the `script` entitlement, with `interpreter`, `shellMode`
@@ -41,9 +41,6 @@ do not correspond to a new build. Only significant changes are listed.
 - Every `Buffer` member now has a doc comment (they were previously bare, so
   the generated reference omitted them), and the legacy `{str}`-style
   comments inherited from DefinitelyTyped are cleaned up.
-
-The version is deliberately not bumped yet: the middle component names the
-PopClip build that ships these, which is not known until it does.
 
 ## 2.6159.0
 
