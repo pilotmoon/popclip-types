@@ -356,17 +356,16 @@ interface PopClip {
    *
    * Requires the `script` entitlement, and may only be called during the action phase.
    *
-   * By default the interpreter is executed directly, with no shell involved and a minimal,
+   * An `interpreter` must be specified. By default, the interpreter is executed directly, with no shell involved and a minimal,
    * deterministic environment: exactly `PATH=/usr/bin:/bin:/usr/sbin:/sbin` and
    * `LANG=en_US.UTF-8`, plus anything given in `env` (which may override both); the
    * `shellMode` option can route the run through the user's shell instead. The working directory is the
-   * extension's package directory. The source is delivered to the interpreter on standard
-   * input, so an `interpreter` is required for this form, and the `stdin` and `arguments`
-   * options are not available — they belong to
-   * {@link runShellScriptFile | runShellScriptFile()}.
+   * extension's package directory.
    *
-   * To pass data into the script, prefer an environment variable since it needs no escaping.
-   * To compose text into the
+   * Any shebang line (`#!`) is ignored, and the `stdin` and `arguments` options are also ignored
+   * -- these apply to shell script **files** only.
+   *
+   * To pass data into the script, use environment variable. To compose text into the
    * command string itself, escape it with {@link Util.shellEscape | util.shellEscape}.
    *
    * Bad input throws immediately, and nothing runs. A script that could not be run, exits with
@@ -403,9 +402,9 @@ interface PopClip {
   /**
    * Run a shell script from a file in the extension package.
    *
-   * The same as {@link runShellScript | runShellScript()} in every way except where the script
+   * The same as {@link runShellScript | runShellScript()} except where the script
    * comes from: `path` names a script file inside the package, relative to the package root;
-   * paths outside the package are refused. Standard input is free in this form, so the `stdin`
+   * paths outside the package are refused. The `stdin`
    * and `arguments` options are available. Without an `interpreter`, the file must be
    * executable with a shebang (`#!`) line.
    *
