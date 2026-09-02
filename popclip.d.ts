@@ -1009,10 +1009,9 @@ declare const $: ShellTag;
  * an interpolation (it arrives already quoted), and write shell variables as `$VAR` rather
  * than `${VAR}` (which JavaScript would claim).
  *
- * Interpolated values may be strings, finite numbers, arrays of those (spliced as separate
- * words), or a {@link ShellScriptResult} (spliced as its trimmed
- * stdout, so one command's output feeds the next). Anything else throws — an `undefined` is
- * a lookup that missed, not a word to run.
+ * Interpolated values may be strings, finite numbers, a {@link ShellScriptResult} (spliced
+ * as its trimmed stdout, so one command's output feeds the next), or arrays of any of those
+ * (spliced as separate words). Anything else throws.
  *
  * Calling `$` with an options object instead returns a configured tag, which can be kept and
  * reused:
@@ -1033,7 +1032,11 @@ interface ShellTag {
 /**
  * What may be interpolated into a {@link ShellTag | $} template.
  */
-type ShellTagValue = string | number | (string | number)[] | ShellScriptResult;
+type ShellTagValue =
+  | string
+  | number
+  | ShellScriptResult
+  | (string | number | ShellScriptResult)[];
 
 /**
  * Options for configuring the {@link ShellTag | $} tag. Unknown keys throw.
