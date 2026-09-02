@@ -194,8 +194,9 @@ interface Extension<CustomOptions = Options> extends ActionProperties {
   keywords?: string;
 
   /**
-   * For snippets using the inverted syntax: the language of the snippet body.
-   * Defaults to `typescript` when the header's comment style is `//`.
+   * For code snippets: the language of the snippet body. Defaults to
+   * `typescript` when the header's comment style is `//`, and to
+   * `applescript` when it is `--`.
    * @hidden
    */
   language?: "javascript" | "typescript" | "applescript";
