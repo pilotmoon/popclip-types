@@ -365,10 +365,12 @@ interface PopClip {
    * Any shebang line (`#!`) is ignored, and the `stdin` and `arguments` options are also ignored
    * -- these apply to shell script **files** only.
    *
-   * To pass data into the script, use environment variable. To compose text into the
-   * command string itself, escape it with {@link Util.shellEscape | util.shellEscape}.
+   * To pass data into the script, use an environment variable. To compose text into the
+   * command string itself, use the {@link ShellTag | $} tag instead, which escapes its
+   * interpolations — for shell one-liners it is usually the more convenient form anyway.
    *
-   * Bad input throws immediately, and nothing runs. A script that could not be run, exits with
+   * Bad input throws immediately, and nothing runs — including any option key that is not
+   * recognized. A script that could not be run, exits with
    * a nonzero status, or is killed by a signal rejects the promise with an error carrying
    * `status`, `stdout`, `stderr` and `terminationReason` (`"exit"` or `"uncaughtSignal"`)
    * properties.
@@ -382,15 +384,9 @@ interface PopClip {
    *
    * @example
    * ```js
-   * // #popclip speak definition example
-   * // name: Speak Definition
-   * // language: javascript
-   * // entitlements: [script]
-   * const word = popclip.input.text.trim();
-   * const definition = util.getDictionaryDefinition(word) ?? "no definition";
-   * await popclip.runShellScript("say $definition", {
-   *  interpreter: "zsh",
-   *  env: { definition },
+   * // any interpreter works, not just shells
+   * const { stdout } = await popclip.runShellScript("print(2 ** 100)", {
+   *   interpreter: "python3",
    * });
    * ```
    */
@@ -408,9 +404,8 @@ interface PopClip {
    * and `arguments` options are available. Without an `interpreter`, the file must be
    * executable with a shebang (`#!`) line.
    *
-   * To pass data into the script, prefer an environment variable, stdin, or positional parameter,
-   * since they need no escaping. To compose text into the
-   * command string itself, escape it with {@link Util.shellEscape | util.shellEscape}.
+   * To pass data into the script, use an environment variable, stdin, or positional
+   * parameter — they need no escaping.
    *
    * @param path Package-relative path of the script file.
    * @param options See {@link ShellScriptOptions}.
@@ -893,6 +888,12 @@ interface ShellScriptOptions {
    * only.
    */
   arguments?: string[];
+  /**
+   * A line prepended to the script before it runs. Inline form only. Default none — pass
+   * `null` (or `""`) to be explicit about wanting none. (The {@link ShellTag | $} tag
+   * defaults this to `"set -euo pipefail"`.)
+   */
+  prefix?: string | null;
 }
 
 /**
@@ -906,6 +907,104 @@ interface ShellScriptResult {
   stderr: string;
   /** The exit status — always 0 here, since a nonzero exit rejects. */
   status: number;
+  /**
+   * The result's text form: `stdout` with trailing newlines stripped — the same rule as
+   * shell command substitution. This is what you get interpolating a result into a template
+   * or string, and a result returned from an action feeds the `-result` after-steps as this
+   * text too.
+   */
+  toString(): string;
+}
+
+/**
+ * The global `$` — the shell tag, implementing {@link ShellTag}. The convenient way to run a
+ * shell command:
+ *
+ * ```js
+ * // #popclip speak definition example
+ * // name: Speak Definition
+ * // entitlements: [script]
+ * const word = popclip.input.text.trim();
+ * const definition = util.getDictionaryDefinition(word) ?? "no definition";
+ * await $`say ${definition}`;
+ * ```
+ */
+declare const $: ShellTag;
+
+/**
+ * The shell tag, available as the global {@link $}. Runs the template text with `/bin/zsh`
+ * in strict mode (`set -euo pipefail`), with each interpolated value shell-escaped into the
+ * command as a literal word — selected text, file paths, anything: it can never become shell
+ * syntax. Requires the `script` entitlement, and may only be used during the action phase —
+ * the same gate, failure rules and result as {@link PopClip.runShellScript | runShellScript}.
+ *
+ * ```js
+ * const result = await $`date +%A`;
+ * popclip.showText(`Today is ${result}`);
+ * ```
+ *
+ * The template text is used **raw**: everything between the backticks goes to the shell
+ * exactly as written, so backslashes survive (`` $`grep -c '\.txt'` `` works) and JavaScript
+ * escape sequences are not interpreted. Two consequences: don't put your own quotes around
+ * an interpolation (it arrives already quoted), and write shell variables as `$VAR` rather
+ * than `${VAR}` (which JavaScript would claim).
+ *
+ * Interpolated values may be strings, finite numbers, arrays of those (spliced as separate
+ * words), or a {@link ShellScriptResult} (spliced as its trimmed
+ * stdout, so one command's output feeds the next). Anything else throws — an `undefined` is
+ * a lookup that missed, not a word to run.
+ *
+ * Calling `$` with an options object instead returns a configured tag, which can be kept and
+ * reused:
+ *
+ * ```js
+ * const py = $({ interpreter: "python3", quote: JSON.stringify, prefix: null });
+ * const answer = await py`print(${popclip.input.text}.upper())`;
+ * ```
+ */
+interface ShellTag {
+  (
+    strings: TemplateStringsArray,
+    ...values: ShellTagValue[]
+  ): Promise<ShellScriptResult>;
+  (options: ShellTagOptions): ShellTag;
+}
+
+/**
+ * What may be interpolated into a {@link ShellTag | $} template.
+ */
+type ShellTagValue = string | number | (string | number)[] | ShellScriptResult;
+
+/**
+ * Options for configuring the {@link ShellTag | $} tag. Unknown keys throw.
+ */
+interface ShellTagOptions {
+  /**
+   * What runs the script; a path or bare name, as for
+   * {@link ShellScriptOptions.interpreter}. Default `/bin/zsh` — the fixed path, not
+   * whatever `zsh` is on the PATH, so behavior is the same on every Mac. Note the default
+   * escaping and prefix assume a POSIX shell; for anything else, set `quote` and `prefix`
+   * to match.
+   */
+  interpreter?: string;
+  /** As {@link ShellScriptOptions.shellMode}. */
+  shellMode?: "none" | "login" | "nonlogin";
+  /** As {@link ShellScriptOptions.env}. */
+  env?: Record<string, string>;
+  /**
+   * A line prepended to the script. Default `"set -euo pipefail"` — strict mode: a failed
+   * command, an unset variable (mind bare `$VAR` probes; use `${VAR:-}` forms), or a failing
+   * pipeline head fails the run. Pass `null` (or `""`) for no prefix. Note the prefix
+   * shifts stderr line numbers by one. When `quote` is set, the default becomes no prefix.
+   */
+  prefix?: string | null;
+  /**
+   * Replaces the built-in POSIX shell escaping for this tag's interpolations. This
+   * redefines what interpolation means, so with a matching `quote` the tag can compose for
+   * any interpreter — `JSON.stringify` makes a passable quoter for several languages. Must
+   * return a string. Setting `quote` also changes the default `prefix` to none.
+   */
+  quote?: (text: string) => string;
 }
 
 /**
@@ -951,28 +1050,6 @@ interface Util {
    * @param text The text to define.
    */
   getDictionaryDefinition(text: string): string | undefined;
-
-  /**
-   * Escape text for literal inclusion in a POSIX shell (sh, bash, zsh) command line: the
-   * result is wrapped in single quotes, and every character of the original — quotes, spaces,
-   * `$`, backticks — arrives in the command as literal text, with nothing expanded or
-   * interpreted.
-   *
-   * For composing {@link PopClip.runShellScript | runShellScript} command strings; where they
-   * fit, prefer the channels that need no escaping at all: `env`, `stdin` and `arguments`.
-   *
-   * @param text The text to escape.
-   *
-   * @example
-   * ```js
-   * // count the lines of a selected file — the path may contain spaces or quotes
-   * const { stdout } = await popclip.runShellScript(
-   *   `wc -l < ${util.shellEscape(popclip.input.data.paths[0])}`,
-   *   { interpreter: "sh" },
-   * );
-   * ```
-   */
-  shellEscape(text: string): string;
 
   /**
    * The languages the system spell checker can check on this Mac, as objects pairing the spell
