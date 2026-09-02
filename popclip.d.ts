@@ -2,7 +2,7 @@
    PopClip JavaScript API -- TypeScript definitions
    ==========================================================================
 
-   Version 2.6204.0, describing PopClip build 6204.
+   Version 2.6208.0, describing PopClip build 6208.
 
    This file declares everything an extension's JavaScript can see. It is the
    `@popclip/types` npm package, and is also served at

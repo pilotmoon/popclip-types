@@ -4,6 +4,11 @@ Versions are `<generation>.<PopClip build>.<edit>`: the middle number is the
 PopClip build the definitions describe, and the last is bumped for edits that
 do not correspond to a new build. Only significant changes are listed.
 
+## 2.6208.0
+
+- Added the `ShellTag`-family of definitions, documenting the `$` template tag
+  for running shell scripts from JavaScript.
+
 ## 2.6204.0
 
 - Added `popclip.runShellScript()` and `popclip.runShellScriptFile()`: run a
